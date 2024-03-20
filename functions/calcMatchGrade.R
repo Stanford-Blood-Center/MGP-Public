@@ -1,6 +1,6 @@
 options(warn = 2) 
 
-library(lgr)
+suppressPackageStartupMessages(library(lgr))
 
 calcMatchGrade<-function(r_itl, d_itl, username){
   

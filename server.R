@@ -2,9 +2,9 @@
 #by: Livia Tran
 #v1.0
 
-library(odbc)
-library(shinyjs)
-library(dplyr)
+suppressPackageStartupMessages(library(odbc))
+suppressPackageStartupMessages(library(shinyjs))
+suppressPackageStartupMessages(library(dplyr))
 library(DBI)
 
 source('functions/functions.R')
