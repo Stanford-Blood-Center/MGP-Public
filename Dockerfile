@@ -36,10 +36,12 @@ RUN apt-get update && apt-get install -y curl && \
 	apt-get purge -y curl && apt-get autoremove -y
 
 # Install any OS-level packages that we need for our R packages.
-# ACCEPT_EULA is used by msodbcsql18
+# ACCEPT_EULA is used by msodbcsql17
+# NOTE: We avoid the driver for SQL Server 18, becaue it enables encryption by
+# default.
 ARG ACCEPT_EULA=y
 RUN apt-get update && \
-  apt-get install -y libodbc2 msodbcsql18 && \
+  apt-get install -y libodbc2 msodbcsql17 && \
 	apt-get clean && rm -rf /tmp/*
 
 # Copy all of the files into the container's scripts directory, and set that to
@@ -49,7 +51,7 @@ WORKDIR /usr/local/src/myscripts
 
 # The current codebase uses the ODBC driver named "SQL Server".
 # Change that to the driver we have installed.
-RUN sed -i -e 's|SQL Server|ODBC Driver 18 for SQL Server|' \
+RUN sed -i -e 's|SQL Server|ODBC Driver 17 for SQL Server|' \
   /usr/local/src/myscripts/functions/functions.R
 
 # Install renv, so that we can import the environment.
