@@ -4,7 +4,7 @@
 #@Stanford Blood Center
 #Version 1.0 
 
-library(shiny)
+suppressPackageStartupMessages(library(shiny))
 
 source('ui.R')
 source('server.R')

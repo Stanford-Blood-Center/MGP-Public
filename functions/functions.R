@@ -1,12 +1,10 @@
 #external functions
 
+suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
-
-library(odbc)
-library(tidyverse)
 library(stringr) 
 library(httr)
-library(rvest)
+suppressPackageStartupMessages(library(rvest))
 
 dbConn <- function(){
   

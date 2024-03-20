@@ -2,11 +2,11 @@
 #by: Livia Tran
 #v1.0
 
-library(shiny)
-library(shinythemes)
-library(shinyjs)
-library(shinyWidgets)
-library(shinycssloaders)
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(shinythemes))
+suppressPackageStartupMessages(library(shinyjs))
+suppressPackageStartupMessages(library(shinyWidgets))
+suppressPackageStartupMessages(library(shinycssloaders))
 
 ui <- navbarPage(title = div('Match Grade Populator (MGP)', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
                  
