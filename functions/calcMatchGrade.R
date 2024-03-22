@@ -7,7 +7,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
   #set up log file
   log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", r_itl, '_', sep=""), fileext = ".log")
   lgr$add_appender(AppenderFile$new(log), name = "mg_log")
-
+  
   lgr$info(paste('Executed by mTilda user: ', username, sep = ''))
   
   tryCatch(
@@ -58,6 +58,35 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         lgr$info('NMDP typing detected. NMDP conversion file loaded.')
       }
       
+      #get recipient's called antibodies
+      sample_num<-getSampleNumber(con, r_itl)
+      ab_results<-getAbResults(con, sample_num)
+      ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
+      
+      calculateDSA<-TRUE
+      #if called antibodies for both classes are 'Negative', DSA = N
+      if(all(ab_results$called_antibodies == 'Negative')){
+        calculateDSA<-FALSE
+      } else{
+        #recipient positive antigens 
+        positive_antigens<-ab_results %>%
+          filter(called_antibodies != 'Negative') %>%
+          pull(called_antibodies) %>%
+          strsplit(., ' ') %>%
+          unlist()
+        
+        #split any haplotypes into separate alleles
+        positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
+        
+        mfi_vals<-getMFIvals(con, r_itl, sample_num)
+        
+        #if value is blank for average value, all beads in that antigen group have
+        #reactivity 0; make blanks 0 
+        mfi_vals<-mfi_vals %>%
+          mutate(average_value = case_when(average_value == '' ~ 0, 
+                                           .default = as.numeric(average_value)))
+      }
+      
       #will need to change this based on user input; will not be doing for llgr$oop
       #to go over all possibilities. 
       for(d in d_itl){
@@ -70,7 +99,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         ##### MATCH EVALUATIONS #####
         
         lgr$info('Donor typing extracted')
-
+        
         lgr$info('Assessing A, B, and C...')
         ABC<-calcABCDRB('ABC', donor_hla, recip_hla)
         lgr$info('Finished assessing A, B, and C!')
@@ -140,7 +169,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         print(tce)
         if(!is.null(tce)){
           lgr$info('Finished assessing TCE permissibility!')
-          updateMGtable(con, 'tce', c(tce,d))
+          #updateMGtable(con, 'tce', c(tce,d))
           lgr$info('TCE value successfully updated!')
         }
         
@@ -155,8 +184,14 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         }
         
         lgr$info('Evaluating DSA...')
-        DSA<-calcDSA(con, mm_alleles, r_itl)
-        print(DSA)
+        if(calculateDSA){
+          DSA<-calcDSA(con, mm_alleles, positive_antigens, mfi_vals)
+        } else{
+          DSA<-'N'
+        }
+        
+        #for dev only
+        lgr$info(paste('DSA:', DSA))
         
         lgr$info('Updating DSA in Match Grade')
         updateMGtable(con, 'dsa', c(DSA, d))
@@ -165,7 +200,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d, '*****', sep=''))
       }
       return(c(TRUE, log))
-    
+      
     },
     error = function(e){
       lgr$fatal(e)

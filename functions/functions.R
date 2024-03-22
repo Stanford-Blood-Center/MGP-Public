@@ -765,42 +765,15 @@ getC2RefAlleles<-function(){
 
 
 #calculate if DSA is Y or N
-calcDSA<-function(db_con, mismatched_alleles, r){
+calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
   
   call_dsa<-'N'
   nmdp_allele<-NULL
   
-  #DSA = No if no mismatched alleles
-  if(length(mismatched_alleles)==0){
+  #DSA = No if no mismatched alleles or called_antibodies = Negative
+  if(length(mismatched_alleles)==0 | any(called_antibodies == 'Negative')){
     return(call_dsa)
   }
-  
-  sample_num<-getSampleNumber(db_con, r)
-  ab_results<-getAbResults(db_con, sample_num)
-  ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
-  
-  #if called antibodies for both classes are 'Negative', DSA = N
-  if(all(ab_results$called_antibodies == 'Negative')){
-    return(call_dsa)
-  }
-  
-  #recipient positive antigens 
-  positive_antigens<-ab_results %>%
-    filter(called_antibodies != 'Negative') %>%
-    pull(called_antibodies) %>%
-    strsplit(., ' ') %>%
-    unlist()
-  
-  #split any haplotypes into separate alleles
-  positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
-  
-  mfi_vals<-getMFIvals(db_con, r, sample_num)
-  
-  #if value is blank for average value, all beads in that antigen group have
-  #reactivity 0; make blanks 0 
-  mfi_vals<-mfi_vals %>%
-    mutate(average_value = case_when(average_value == '' ~ 0, 
-                                     .default = as.numeric(average_value)))
   
   for(t in mismatched_alleles){
     
