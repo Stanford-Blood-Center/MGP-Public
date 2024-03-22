@@ -169,7 +169,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         print(tce)
         if(!is.null(tce)){
           lgr$info('Finished assessing TCE permissibility!')
-          #updateMGtable(con, 'tce', c(tce,d))
+          updateMGtable(con, 'tce', c(tce,d))
           lgr$info('TCE value successfully updated!')
         }
         
