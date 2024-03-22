@@ -157,7 +157,7 @@ server <- function(input, output, session) {
           message
         } else{
           message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
-          lgr$info(sprintf(message, input$p_itl, 'livtran@stanford.edu'))
+          lgr$info(sprintf(message, paste(input$p_itl, 'failed'), 'livtran@stanford.edu'))
           lgr$info('**********MATCH GRADE EVALUATION END**********')
           HTML(sprintf(message, paste(input$p_itl, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
         }
