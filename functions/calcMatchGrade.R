@@ -81,10 +81,12 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         mfi_vals<-getMFIvals(con, r_itl, sample_num)
         
         #if value is blank for average value, all beads in that antigen group have
-        #reactivity 0; make blanks 0 
+        #reactivity 0; make blanks and NA 0 
         mfi_vals<-mfi_vals %>%
           mutate(average_value = case_when(average_value == '' ~ 0, 
                                            .default = as.numeric(average_value)))
+        
+        mfi_vals$average_value[which(is.na(mfi_vals$average_value))]<-0
       }
       
       #will need to change this based on user input; will not be doing for llgr$oop
@@ -190,7 +192,6 @@ calcMatchGrade<-function(r_itl, d_itl, username){
           DSA<-'N'
         }
         
-        #for dev only
         lgr$info(paste('DSA:', DSA))
         
         lgr$info('Updating DSA in Match Grade')
