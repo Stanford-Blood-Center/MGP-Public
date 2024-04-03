@@ -11,7 +11,8 @@ getInstructions<-function(){
 
     <div class='instruction'>
         <b>Before beginning, please make sure donors for the recipient of interest have been moved from the 'Phenotypes'
-            section of Match Grade to the middle window of the program.</b>
+            section of Match Grade to the middle window of the program. Please make sure the 'Recipient DSA Date' is populated
+            in the Match Grade application; this is required for DSA evaluation.</b>
         <br>
         <u>Note:</u> 'Clear Inputs' can be clicked at any time to reset all fields back to their initial states.
     </div>
