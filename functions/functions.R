@@ -307,7 +307,6 @@ getTCE<-function(d_hla, r_hla){
 #'ABC' - HLA-A, B, C
 #'DRP' - HLA-DRB3/4/5
 #'DR' - HLA-DRB1
-cat<-'DRB'
 
 calcABCDRB<-function(cat, d_hla, r_hla){
   
@@ -401,6 +400,8 @@ calcABCDRB<-function(cat, d_hla, r_hla){
     
     ##GvH calculation
     for(i in r_mm_alleles){
+      
+      nmdp_flag<-reg_flag<-FALSE
       
       if(i==''){
         gvh[['DRB']]<-0
