@@ -81,12 +81,28 @@ getTyping<-function(input_df, type){
   colnames(t_df)[names(t_df) == 'DRP'] <- 'DRB'
   colnames(t_df)[names(t_df) == 'DR'] <- 'DRB1'
   
+  
+  #find homozygous alleles (X or NA)
+  ds_allele<-t_df %>%
+    select(where(~any(. == "X" | is.na(.)))) %>%
+    names() 
+  
+  #populate X or NA w extracted homozygous allele
+  for(i in ds_allele){
+    if(t_df[,i][1]=='X'|is.na(t_df[,i][1])){
+      t_df[,i][1]<-t_df[,i][2]
+    } else{
+      t_df[,i][2]<-t_df[,i][1]
+    }
+  }
+  
   #get any alleles with fully sequenced, null alleles
   null_alleles<-t_df %>%
     select(where(~any(str_sub(., -1) == 'N' & !is.na(.) & str_count(., '[[:alpha:]]') == 1))) %>%
     names()
   
   r_null_allele<-NULL
+  
   if(type == 'r'){
     if(length(null_alleles)!=0){
       if(null_alleles == 'DRB'){
@@ -117,20 +133,6 @@ getTyping<-function(input_df, type){
       t_df[,a][2]<-t_df[,a][1]
     }
     lgr$info('One non-expressed allele detected')
-  }
-  
-  #find homozygous alleles (X or NA)
-  ds_allele<-t_df %>%
-    select(where(~any(. == "X" | is.na(.)))) %>%
-    names() 
-  
-  #populate X or NA w extracted homozygous allele
-  for(i in ds_allele){
-    if(t_df[,i][1]=='X'|is.na(t_df[,i][1])){
-      t_df[,i][1]<-t_df[,i][2]
-    } else{
-      t_df[,i][2]<-t_df[,i][1]
-    }
   }
   
   #if a locus has heterozygous alleles and does not have NMDP alleles, 
