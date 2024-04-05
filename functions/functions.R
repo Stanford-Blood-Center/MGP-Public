@@ -309,7 +309,6 @@ getTCE<-function(d_hla, r_hla){
 #'ABC' - HLA-A, B, C
 #'DRP' - HLA-DRB3/4/5
 #'DR' - HLA-DRB1
-
 calcABCDRB<-function(cat, d_hla, r_hla){
   
   residue<-90
@@ -336,7 +335,7 @@ calcABCDRB<-function(cat, d_hla, r_hla){
       #if DRB1 has been sequenced is not NMDP, then DRB3/4/5 is absent due to
       #not being expressed, and not due to lack of typing
       #change NA to ''
-      if(!all(grepl(':[A-WYZ]', DRB1))){
+      if(all(!grepl(':[A-WYZ]', DRB1))){
         lgr$info('Donor: DRB3/4/5 empty and DRB1 is fully sequenced. HvG will be 0')
         d_cat[,cat]<-c('', '')
       } 
@@ -371,7 +370,7 @@ calcABCDRB<-function(cat, d_hla, r_hla){
       #if DRB1 has been sequenced is not NMDP, then DRB3/4/5 is absent due to
       #not being expressed, and not due to lack of typing
       #change NA to ''
-      if(!all(grepl(':[A-WYZ]', DRB1))){
+      if(all(!grepl(':[A-WYZ]', DRB1))){
         lgr$info('Recipient: DRB3/4/5 empty and DRB1 is fully sequenced. GvH will be 0')
         r_cat[,cat]<-c('', '')
       } 
@@ -876,7 +875,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
       }
       #check if antigen with MFI > 2000 is in called_antibodies list
       #for surrogates, there can be multiple probe_ids
-      if(unique(mfi_eval$antigen) %in% positive_antigens | any(mfi_eval$probe_id %in% positive_antigens)){
+      if(unique(mfi_eval$antigen) %in% called_antibodies | any(mfi_eval$probe_id %in% called_antibodies)){
         call_dsa<-'Y'
         lgr$info(sprintf('Calling DSA Y due to %s', t))
         #if DSA = Y, break out of loop
