@@ -9,6 +9,8 @@ calcMatchGrade<-function(r_itl, d_itl, username){
   lgr$add_appender(AppenderFile$new(log), name = "mg_log")
   
   lgr$info(paste('Executed by mTilda user: ', username, sep = ''))
+  sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
+  lgr$info(paste('SUNetID: ', sunetID, sep = ''))
   
   tryCatch(
     {
