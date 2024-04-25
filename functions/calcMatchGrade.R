@@ -62,35 +62,50 @@ calcMatchGrade<-function(r_itl, d_itl, username){
       
       #get recipient's called antibodies
       sample_num<-getSampleNumber(con, r_itl)
-      ab_results<-getAbResults(con, sample_num)
-      ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
       
       calculateDSA<-TRUE
-      #if called antibodies for both classes are 'Negative', DSA = N
-      if(all(ab_results$called_antibodies == 'Negative')){
-        calculateDSA<-FALSE
+      
+      #if the sample number is NA, 'Recipient DSA Date' was not populated
+      #field is not to be populated if only C1Q was ordered for a patient
+      if(is.na(sample_num)){
+        calculateDSA<-'Unknown'
       } else{
-        #recipient positive antigens 
-        positive_antigens<-ab_results %>%
-          filter(called_antibodies != 'Negative') %>%
-          pull(called_antibodies) %>%
-          strsplit(., ' ') %>%
-          unlist()
+        #get IgG test numbers to get MFI values and AB screening results
+        #for IgG specific tests
+        testNums<-paste(getIgGTestNums(con, sample_num), collapse=',')
         
-        #split any haplotypes into separate alleles
-        positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
+        ab_results<-getAbResults(con, testNums)
+        ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
         
-        mfi_vals<-getMFIvals(con, r_itl, sample_num)
+        print(ab_results)
+        #if called antibodies for both classes are 'Negative', DSA = N
+        if(all(ab_results$called_antibodies == 'Negative')){
+          calculateDSA<-FALSE
+        } else{
+          #recipient positive antigens 
+          positive_antigens<-ab_results %>%
+            filter(called_antibodies != 'Negative') %>%
+            pull(called_antibodies) %>%
+            strsplit(., ' ') %>%
+            unlist()
+          
+          #split any haplotypes into separate alleles
+          positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
+
+          mfi_vals<-getMFIvals(con, r_itl, testNums)
+          
+          #if value is blank for average value, all beads in that antigen group have
+          #reactivity 0; make blanks and NA 0 
+          mfi_vals<-mfi_vals %>%
+            mutate(average_value = case_when(average_value == '' ~ 0, 
+                                             .default = as.numeric(average_value)))
+          
+          mfi_vals$average_value[which(is.na(mfi_vals$average_value))]<-0
+        }
         
-        #if value is blank for average value, all beads in that antigen group have
-        #reactivity 0; make blanks and NA 0 
-        mfi_vals<-mfi_vals %>%
-          mutate(average_value = case_when(average_value == '' ~ 0, 
-                                           .default = as.numeric(average_value)))
-        
-        mfi_vals$average_value[which(is.na(mfi_vals$average_value))]<-0
       }
       
+
       #will need to change this based on user input; will not be doing for llgr$oop
       #to go over all possibilities. 
       for(d in d_itl){
@@ -188,10 +203,12 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         }
         
         lgr$info('Evaluating DSA...')
-        if(calculateDSA){
+        if(calculateDSA == TRUE){
           DSA<-calcDSA(con, mm_alleles, positive_antigens, mfi_vals)
-        } else{
+        } else if(calculateDSA == FALSE){
           DSA<-'N'
+        } else if (calculateDSA == 'Unknown'){
+          DSA<-'U'
         }
         
         lgr$info(paste('DSA:', DSA))
