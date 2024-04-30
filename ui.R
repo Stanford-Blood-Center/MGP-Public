@@ -1,6 +1,6 @@
 #ui
 #by: Livia Tran
-#v1.0
+#v1.1.0
 
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(shinythemes))
@@ -20,7 +20,7 @@ ui <- navbarPage(title = div('Match Grade Populator (MGP)', collapsible = FALSE,
                           #sidebar layout 
                           sidebarLayout(
                             sidebarPanel(
-                              width =3,
+                              width =4,
                               textInput('p_itl', 'Patient ITL', ''),
                               column(
                                 12,

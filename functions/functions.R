@@ -700,7 +700,6 @@ calcDQDP<-function(cat, d_hla, r_hla){
   }
 }
 
-
 #get sample number  
 getSampleNumber<-function(con, r_itl){
   
@@ -712,12 +711,25 @@ getSampleNumber<-function(con, r_itl){
   
 }
 
-#get antibody screening results
-getAbResults <- function(con, s_num) {
+#get test numbers for IgG 
+getIgGTestNums<-function(con, s_num){
   
-  res<-dbGetQuery(con, sprintf('SELECT sample_number, called_antibodies
+  res<-dbGetQuery(con, sprintf("SELECT test_number
+                           FROM dbo.Patient_tests
+                           WHERE sample_number = %s and test_type_code in ('LSAB1', 'LSAB2')", s_num))
+  testNums<-res %>%
+    pull(test_number)
+  
+  return(testNums)
+  
+}
+
+#get antibody screening results
+getAbResults <- function(con, testNumbers) {
+  
+  res<-dbGetQuery(con, sprintf('SELECT called_antibodies
                            FROM dbo.Screening_results
-                           WHERE sample_number = %s', s_num))
+                           WHERE test_number in (%s)', testNumbers))
   
   #use str_trim to make sure there is no white space before or after if 'Negative'
   #is present in the called_antibodies column 
@@ -727,16 +739,17 @@ getAbResults <- function(con, s_num) {
 }
 
 #get MFI values
-getMFIvals<-function(con, p_itl, sample){
+getMFIvals<-function(con, p_itl, testNums){
   
   res<-dbGetQuery(con, sprintf('SELECT antigen, probe_id, allele, average_value
                                 FROM dbo.Luminex_SA_bead_detail
                                 WHERE patient_number = %s AND
-                                sample_number = %s', p_itl, sample))
+                                test_number in (%s)', p_itl, testNums))
   
   return(res)
   
 }
+
 #get antigen table
 getAntigenTable<-function(con){
   

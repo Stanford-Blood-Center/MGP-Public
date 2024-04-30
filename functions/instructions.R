@@ -7,11 +7,13 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
+    <h6><i><b>Version 1.1.0</b></i></h6>
     <br>
 
     <div class='instruction'>
         <b>Before beginning, please make sure donors for the recipient of interest have been moved from the 'Phenotypes'
-            section of Match Grade to the middle window of the program. Please make sure the 'Recipient DSA Date' is populated
+            section of Match Grade to the middle window of the program. If the recipient of interest does not have IgG tests, 
+            do <u>NOT</u> populate the 'Recipient DSA Date' field. Otherwise, please make sure the 'Recipient DSA Date' is populated 
             in the Match Grade application; this is required for DSA evaluation.</b>
         <br>
         <u>Note:</u> 'Clear Inputs' can be clicked at any time to reset all fields back to their initial states.
@@ -29,7 +31,7 @@ getInstructions<-function(){
 
     <div class='instruction'>
         <b>3)</b> A drop-down box populated with donors available for evaluation for the entered patient ITL. Select
-        desired donors for Match Grade evaluation.
+        the desired donor for evaluation.
         <br>
         <b><u>Please make sure any patients with manually entered typings from other facilities are excluded.
                 The application will calculate values for those donors, but they may be incorrect.</b></u>

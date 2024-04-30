@@ -1,11 +1,11 @@
 #server
 #by: Livia Tran
-#v1.0
+#v1.1.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
 suppressPackageStartupMessages(library(dplyr))
-library(DBI)
+suppressPackageStartupMessages(library(DBI))
 
 source('functions/functions.R')
 source('functions/calcMatchGrade.R')
@@ -71,6 +71,8 @@ server <- function(input, output, session) {
     run$log_path<-NULL
   })
   
+  donor<-reactiveValues(selection=NULL, donorDF=NULL)
+  
   #donor selection
   observeEvent(input$query_donor,{
     
@@ -85,28 +87,37 @@ server <- function(input, output, session) {
     
     con <- dbConn()
     
-    mg_res <- dbGetQuery(con, paste("select * from dbo.Match_grades where recipient_number = ", input$p_itl))
+    mg_res <- dbGetQuery(con, paste("SELECT mg.*, p.last_name, p.first_name FROM dbo.Match_grades mg
+                                     LEFT JOIN dbo.Patients p
+                                     ON mg.donor_number = p.patient_number
+                                     WHERE mg.recipient_number = ", input$p_itl))
     
     if(nrow(mg_res)==0){
       output$p_check <- renderText({'No patients were found with the input ITL. Please make sure the input patient ITL is correct and that it was imported into Match Grade.'})
-      disable('p_itl')
+      disable('p_itl') 
       dbDisconnect(con)
       return()
     } else{ 
       
-       donors <- mg_res %>%
-          filter(recipient_number != donor_number) %>%
-          select(donor_number) %>%
-          pull()
+       donor$donorDF <- mg_res %>%
+         filter(recipient_number != donor_number) %>%
+         mutate(name=paste(last_name, first_name, sep = ',')) %>%
+         mutate(full=paste(name, donor_number, sep = ' - ')) %>%
+         select(donor_number, name, full)
+       
+       print(donor$donorDF)
+       #donorNames <- donor$donorDF %>% 
+      #                  pull(name)
+       
+       #donorITL<- donor$donorDF %>% 
+      #              pull(donor_number)
+       
+       donorEntry<- donor$donorDF %>%
+                      pull(full)
        
          output$donor_itl <- renderUI({
            tagList(
-            #div(style = "margin-bottom:15px"),
-            pickerInput('d_itl', 'Donor Selection', 
-                        choices = c(donors), multiple = TRUE, 
-                        options = pickerOptions(actionsBox = TRUE, noneSelectedText = 'Select Donors'), 
-                        selected = NULL
-                        )
+             selectInput('d_itl', 'Donor Selection', choices=c(donorEntry), multiple = FALSE, selected = NULL)
          )})
     }
     
@@ -115,13 +126,17 @@ server <- function(input, output, session) {
     })
   
   
-  donor<-reactiveValues(selection=NULL)
-  
   #save donor selected ITLs to a reactive value
   observeEvent(input$d_itl, {
     
-    donor$selection<-input$d_itl
     
+    donor$selection<-donor$donorDF %>%
+                      filter(full == input$d_itl) %>%
+                      select(donor_number) %>%
+                      pull()
+    
+    print(donor$selection)
+
   })
   
   #logic for enabling Run MGP button
