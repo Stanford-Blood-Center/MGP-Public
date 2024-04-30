@@ -94,7 +94,7 @@ server <- function(input, output, session) {
     
     if(nrow(mg_res)==0){
       output$p_check <- renderText({'No patients were found with the input ITL. Please make sure the input patient ITL is correct and that it was imported into Match Grade.'})
-      disable('p_itl')
+      disable('p_itl') 
       dbDisconnect(con)
       return()
     } else{ 
@@ -102,14 +102,22 @@ server <- function(input, output, session) {
        donor$donorDF <- mg_res %>%
          filter(recipient_number != donor_number) %>%
          mutate(name=paste(last_name, first_name, sep = ',')) %>%
-         select(donor_number, name)
+         mutate(full=paste(name, donor_number, sep = ' - ')) %>%
+         select(donor_number, name, full)
        
-       donorNames <- donor$donorDF %>% 
-                        pull(name)
+       print(donor$donorDF)
+       #donorNames <- donor$donorDF %>% 
+      #                  pull(name)
+       
+       #donorITL<- donor$donorDF %>% 
+      #              pull(donor_number)
+       
+       donorEntry<- donor$donorDF %>%
+                      pull(full)
        
          output$donor_itl <- renderUI({
            tagList(
-             selectInput('d_itl', 'Donor Selection', choices=c(donorNames), multiple = FALSE, selected = NULL)
+             selectInput('d_itl', 'Donor Selection', choices=c(donorEntry), multiple = FALSE, selected = NULL)
          )})
     }
     
@@ -123,9 +131,11 @@ server <- function(input, output, session) {
     
     
     donor$selection<-donor$donorDF %>%
-                      filter(name == input$d_itl) %>%
+                      filter(full == input$d_itl) %>%
                       select(donor_number) %>%
                       pull()
+    
+    print(donor$selection)
 
   })
   
