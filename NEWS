@@ -3,7 +3,7 @@ MGP v 1.1.0 4/24/2024
   *Changes to sample number derivation -- if a recipient does not have IgG testing, 
   'Recipient DSA Date' is to be left blank. DSA will be set to 'U'. 
   *For a given sample number, filter to only LSAB1 and LSAB2 results
-  *Changes to the 'Donor Selection' drop down. Only one donor may be selected at at time,
+  *Changes to the 'Donor Selection' drop down. Only one donor may be selected at a time,
   and choices are now the donor's last name + first name + donor ITL, instead of only the donor ITL. 
   *Changes to instructions
   
