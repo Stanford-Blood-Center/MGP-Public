@@ -1,3 +1,13 @@
+MGP v 1.1.1 5/3/2024
+-------------------
+  *Data type conversion for donor selection to character - otherwise updated numeric
+  values are appended with a '.'
+  *Minor fix to the 'Run MGP' button logic. Since only one donor is selected a time,
+  logic for enabling button was not occurring for subsequent runs after the first run,
+  since there was technically no donor selection. Added a 'Nothing selected' as the 
+  default option, which now ensures the 'Run MGP' button is disabled until
+  a donor is selected.
+
 MGP v 1.1.0 4/24/2024
 -------------------
   *Changes to sample number derivation -- if a recipient does not have IgG testing, 

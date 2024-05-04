@@ -8,7 +8,7 @@ suppressPackageStartupMessages(library(shinyjs))
 suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(shinycssloaders))
 
-ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.1.0', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
+ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.1.1', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
                  
                  
                  #main tab 

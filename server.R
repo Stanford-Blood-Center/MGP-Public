@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.1.0
+#v1.1.1
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -105,50 +105,38 @@ server <- function(input, output, session) {
          mutate(full=paste(name, donor_number, sep = ' - ')) %>%
          select(donor_number, name, full)
        
-       print(donor$donorDF)
-       #donorNames <- donor$donorDF %>% 
-      #                  pull(name)
-       
-       #donorITL<- donor$donorDF %>% 
-      #              pull(donor_number)
-       
        donorEntry<- donor$donorDF %>%
                       pull(full)
        
          output$donor_itl <- renderUI({
            tagList(
-             selectInput('d_itl', 'Donor Selection', choices=c(donorEntry), multiple = FALSE, selected = NULL)
+             selectInput('d_itl', 'Donor Selection', choices=c("Nothing selected", donorEntry), multiple = FALSE)
          )})
     }
     
     dbDisconnect(con)
     
     })
-  
-  
+
   #save donor selected ITLs to a reactive value
   observeEvent(input$d_itl, {
     
+    #logic for enabling Run MGP button
+    if(input$d_itl != 'Nothing selected'){
+      enable('run')
+    } else{
+      disable('run')
+    }
     
     donor$selection<-donor$donorDF %>%
                       filter(full == input$d_itl) %>%
                       select(donor_number) %>%
                       pull()
     
-    print(donor$selection)
+    donor$selection<-as.character(donor$selection)
 
   })
   
-  #logic for enabling Run MGP button
-  observe({
-    if(!is.null(input$d_itl)){
-      enable('run')
-    } else{
-      disable('run')
-    }
-    
-  })
-    
   run<-reactiveValues(result=NULL, log_path=NULL)
   
     #run MGP button logic

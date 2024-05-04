@@ -1,3 +1,5 @@
+#v 1.1.1
+
 options(warn = 2) 
 
 suppressPackageStartupMessages(library(lgr))
@@ -77,7 +79,6 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         ab_results<-getAbResults(con, testNums)
         ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
         
-        print(ab_results)
         #if called antibodies for both classes are 'Negative', DSA = N
         if(all(ab_results$called_antibodies == 'Negative')){
           calculateDSA<-FALSE
