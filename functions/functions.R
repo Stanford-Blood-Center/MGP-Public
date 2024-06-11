@@ -34,7 +34,7 @@ getMatchGrade<-function(con, r_itl){
 #and updating the version in /ref
 loadNMDP<-function(){
   
-  nmdp_file<-readRDS('ref/nmdp.rda')
+  nmdp_file<-readRDS(list.files('ref', pattern = 'nmdp', full.names = T))
   
   return(nmdp_file)
 }
@@ -544,10 +544,21 @@ calcABCDRB<-function(cat, d_hla, r_hla){
       }
     }
     
+    
     gvh_total<-sum(gvh)
     hvg_total<-sum(hvg)
     
-    matches<-total-max(gvh_total, hvg_total)
+    mismatches<-0
+    
+    #get the greater of the two mismatches for each locus and count # of mismatches
+    #to subtract from the total
+    for(a in 1:length(gvh)){
+      
+      mismatches<-mismatches+max(gvh[[a]], hvg[[a]])
+      
+    }
+
+    matches<-total-mismatches
     
     return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles))
     
