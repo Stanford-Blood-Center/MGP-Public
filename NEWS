@@ -1,3 +1,14 @@
+MGP v 1.2.0 6/10/2024
+-------------------
+  *Minor change to logic to calculate the total number of mismatches. Instead of
+  calculating matches by Total Matches = Total - max(GvH, HvG), calculate number
+  of mismatches to subtract from by taking the max of GvH and HvG at each locus 
+  and adding them all together; subtract total from that sum
+  *Moved check for NMDP alleles to donor assessment for loop; no need to examine
+  entire MG DF for NMDP if only one donor will be processed at a time.
+  *Add version # to nmdp.rda file. Use file path with 'nmdp' pattern to load
+  file. This is to accomodate future auto-upload of NMDP files
+
 MGP v 1.1.1 5/3/2024
 -------------------
   *Data type conversion for donor selection to character - otherwise updated numeric

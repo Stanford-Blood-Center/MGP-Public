@@ -1,4 +1,4 @@
-#v 1.1.1
+#v 1.2.0
 
 options(warn = 2) 
 
@@ -20,7 +20,6 @@ calcMatchGrade<-function(r_itl, d_itl, username){
       #version 3.55.0 as of 1/31/24
       alignments<<-readRDS('ref/alignments.rda')
       c2_antigen_ref<<-getC2RefAlleles()
-      
       
       lgr$info(paste('Recipient ITL entered:', r_itl))
       
@@ -50,17 +49,6 @@ calcMatchGrade<-function(r_itl, d_itl, username){
       
       lgr$info('Recipient typing extracted')
       
-      #load NMDP file if there are any NMDP codes present in the typing data
-      nmdpCheck<-mg %>%
-        select(c(a_1, a_2, b_1, b_2, c_1, c_2, dr_1, dr_2, drp_1, drp_2, dqb_1, dqb_2, dqa_1, dqa_2,
-                 dpa_1, dpa_2, dpb_1, dpb_2)) %>%
-        #check if character directly after the colon is a letter
-        mutate_all(~grepl(':[A-WYZ]', .))
-      
-      if(any(nmdpCheck)){
-        nmdp_file<<-loadNMDP()
-        lgr$info('NMDP typing detected. NMDP conversion file loaded.')
-      }
       
       #get recipient's called antibodies
       sample_num<-getSampleNumber(con, r_itl)
@@ -106,15 +94,23 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         
       }
       
-
-      #will need to change this based on user input; will not be doing for llgr$oop
-      #to go over all possibilities. 
       for(d in d_itl){
         
         lgr$info(paste('*****Calculating Match Grade for donor ITL ', d, '*****', sep=''))
         
         d_mg<-filterDonor(mg, d)
         donor_hla<-getTyping(d_mg, 'd')[[1]]
+        
+        #load NMDP file if there are any NMDP codes present in the donor typing data
+        nmdpCheck<-donor_hla %>%
+          select(c(A, B, C, DPA1, DPB1, DQA1, DQB1, DRB1, DRB)) %>%
+          #check if character directly after the colon is a letter
+          mutate_all(~grepl(':[A-WYZ]', .))
+        
+        if(any(nmdpCheck)){
+          nmdp_file<<-loadNMDP()
+          lgr$info('NMDP typing detected. NMDP conversion file loaded.')
+        }
         
         ##### MATCH EVALUATIONS #####
         
