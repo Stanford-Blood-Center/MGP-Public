@@ -1,11 +1,12 @@
 #server
 #by: Livia Tran
-#v1.1.1
+#v1.3.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(DBI))
+suppressPackageStartupMessages(library(DT))
 
 source('functions/functions.R')
 source('functions/calcMatchGrade.R')
@@ -36,7 +37,7 @@ server <- function(input, output, session) {
   
   disable('run')
   
-  username<-reactiveValues(log=NULL)
+  username<-reactiveValues(log=NULL, creds=NULL)
   
   #validate mTilda username; capture mTilda username to use in log
   observeEvent(input$validate, {
@@ -44,7 +45,8 @@ server <- function(input, output, session) {
     con <- dbConn()
     
     username_validation <- dbGetQuery(con, sprintf("select * from dbo.Staff where user_id = '%s'", input$username))
-
+    username$creds <- username_validation$security_level
+    
     if(nrow(username_validation)!=0){
       username$log<-input$username
       removeModal()
@@ -66,9 +68,15 @@ server <- function(input, output, session) {
     output$p_itl_oops <- NULL
     output$log <- NULL 
     output$finish_text <- NULL
-    output$spinner <- NULL
+    output$mgTable<-NULL
+    output$mgPopulationTable<-NULL
+    output$comparisonText<-NULL
     run$result<-NULL
     run$log_path<-NULL
+    run$df<-NULL
+    run$mgpTable<-NULL
+    run$mgDBTable<-NULL
+    output$spinner <- NULL
   })
   
   donor<-reactiveValues(selection=NULL, donorDF=NULL)
@@ -99,25 +107,25 @@ server <- function(input, output, session) {
       return()
     } else{ 
       
-       donor$donorDF <- mg_res %>%
-         filter(recipient_number != donor_number) %>%
-         mutate(name=paste(last_name, first_name, sep = ',')) %>%
-         mutate(full=paste(name, donor_number, sep = ' - ')) %>%
-         select(donor_number, name, full)
-       
-       donorEntry<- donor$donorDF %>%
-                      pull(full)
-       
-         output$donor_itl <- renderUI({
-           tagList(
-             selectInput('d_itl', 'Donor Selection', choices=c("Nothing selected", donorEntry), multiple = FALSE)
-         )})
+      donor$donorDF <- mg_res %>%
+        filter(recipient_number != donor_number) %>%
+        mutate(name=paste(last_name, first_name, sep = ',')) %>%
+        mutate(full=paste(name, donor_number, sep = ' - ')) %>%
+        select(donor_number, name, full)
+      
+      donorEntry<- donor$donorDF %>%
+        pull(full)
+      
+      output$donor_itl <- renderUI({
+        tagList(
+          selectInput('d_itl', 'Donor Selection', choices=c("Nothing selected", donorEntry), multiple = FALSE)
+        )})
     }
     
     dbDisconnect(con)
     
-    })
-
+  })
+  
   #save donor selected ITLs to a reactive value
   observeEvent(input$d_itl, {
     
@@ -129,30 +137,38 @@ server <- function(input, output, session) {
     }
     
     donor$selection<-donor$donorDF %>%
-                      filter(full == input$d_itl) %>%
-                      select(donor_number) %>%
-                      pull()
+      filter(full == input$d_itl) %>%
+      select(donor_number) %>%
+      pull()
     
     donor$selection<-as.character(donor$selection)
-
+    
   })
   
-  run<-reactiveValues(result=NULL, log_path=NULL)
+  run<-reactiveValues(result=NULL, log_path=NULL, df=NULL, mgpTable=NULL, mgDBTable=NULL)
   
-    #run MGP button logic
-    observeEvent(input$run, {
-      
+  #run MGP button logic
+  observeEvent(input$run, {
+    
+    if(username$creds == '30'){
       output$spinner <- renderUI({
-        withSpinner(uiOutput('finish_text'), color='#DC143C')
+      withSpinner(uiOutput('finish_text'), color='#DC143C')
+    })
+    
+    } else if(username$creds %in% c('50', '60')){
+      output$spinner <-renderUI({
+        withSpinner(tagList(uiOutput('comparisonText'), uiOutput('mgTable'), uiOutput('mgPopulationTable')), color='#DC143C')
       })
+    }
+    
+    if(username$creds == '30'){
       
       output$finish_text<-renderUI({
-
-        run_res<-calcMatchGrade(input$p_itl, donor$selection, username$log)
-
-        run$result<-run_res[1]
-        run$log_path<-run_res[2]
-
+        run_res<-calcMatchGrade(input$p_itl, donor$selection, username$log, username$creds)
+        
+        run$result<-run_res[[1]]
+        run$log_path<-run_res[[2]]
+        
         if(run$result){
           message<-paste('Match Grade evaluations for recipient ITL', input$p_itl, 'completed!')
           lgr$info(message)
@@ -165,38 +181,118 @@ server <- function(input, output, session) {
           HTML(sprintf(message, paste(input$p_itl, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
         }
       })
-    })
-    
-    
-    #download log UI
-    observe({
-      req(run$result)
+    } else if(username$creds %in% c('50', '60')){
       
-      output$log<-renderUI(
-        tagList(
-          hr(),
-          div(style="text-align:center;", 
-              downloadButton("downloadlog", label = "Download log")
-          )
-        ))
-    })
+        #MGP output
+        output$mgTable<-renderUI({
+          
+          run_res<-calcMatchGrade(input$p_itl, donor$selection, username$log, username$creds)
+          
+          run$result<-run_res[[1]]
+          run$log_path<-run_res[[2]]
+          run$df<-run_res[[3]]
+          
+          if(run$result){
+            run$mgpTable<-run$df %>% replace(is.na(.), '')
+            
+            tagList(
+              hr(),
+              h3('MGP Results', style = "text-align: center; font-weight: bold;"),
+              DT::renderDT(run$mgpTable, options = list(dom = 't', scrollX = TRUE), rownames = FALSE), 
+              br())
+          } else{
+            message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
+            lgr$info(sprintf(message, paste(input$p_itl, 'failed'), 'livtran@stanford.edu'))
+            lgr$info('**********MATCH GRADE EVALUATION END**********')
+            HTML(sprintf(message, paste(input$p_itl, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
+          }
+        })
+        
+          #MG DB
+          output$mgPopulationTable<-renderUI({
+            req(run$result)
+            if(run$result == 'TRUE'){
+              con <- dbConn()
+              
+              mgPopulationTable <- dbGetQuery(con, sprintf("SELECT DSA, ABCDRDQ_alleles, ABCDRDQ_match, 
+                                                   ABCDRB1_alleles, ABCDRB1_match, ABCDRB1_mm_GVH, ABCDRB1_mm_HVG, 
+                                                   DRB345DQDP_alleles, DRB345DQDP_match, DRB345DQDP_mm_GVH, DRB345DQDP_mm_HVG,
+                                                   DRB345DQDP_mm_TCE, Seven_loci_alleles, seven_loci_match
+                                                   FROM dbo.Match_grades 
+                                                   WHERE recipient_number = %s and donor_number = %s", input$p_itl, donor$selection))
+              
+              dbDisconnect(con)
+              
+              #remove any trailing spaces
+              mgPopulationTable<-as.data.frame(lapply(mgPopulationTable, str_trim), stringsAsFactors = F)
+              #make read in data numeric types numeric
+              mgPopulationTable[,c(2:11, 13:length(mgPopulationTable))]<-lapply(mgPopulationTable[, c(2:11, 13:length(mgPopulationTable))], as.numeric)
+              #replace any NAs with ''
+              run$mgDBTable<-mgPopulationTable %>% replace(is.na(.), '')
+              
+              tagList(
+                hr(),
+                h3('Match Grade Results', style = "text-align: center; font-weight: bold;"),
+                DT::renderDT(run$mgDBTable, options = list(dom = 't', scrollX = TRUE), width = '25%', rownames = FALSE))
+            } else{
+              NULL
+            }
+          })
+          
+          #difference comparison output
+          output$comparisonText<-renderUI({
+            req(run$result)
+            if(run$result == 'TRUE'){
+              
+              comparison<-all.equal(run$mgDBTable, run$mgpTable)
+              
+              baseText<-"<b>Mismatched columns: </b>"
+              
+              if(length(comparison)==1 & any(!grepl('Component', comparison))){
+                comparison<-paste(baseText, ' None', sep = '')
+              } else{ 
+                #[\u201C\u201D] = curly quotes
+                comparison<-paste(baseText, paste(gsub("[\u201C\u201D]", "", str_extract(comparison, "(?<=Component )[^:]+")), collapse = ', '), sep = '')
+              }
+              HTML(paste0('<div style="text-align: center;">', comparison, '</div>'))
+            } else{
+              NULL
+            }
+
+          })
+        } 
     
-    #download log client 
-    output$downloadlog <- downloadHandler(
-      filename <- function() {
-        basename(run$log_path)},
-      
-      content <- function(file) {
-        file.copy(run$log_path, file)
-      }
-    )
+  })
+  
+  
+  #download log UI
+  observe({
+    req(run$result)
+    output$log<-renderUI(
+      tagList(
+        hr(),
+        div(style="text-align:center;", 
+            downloadButton("downloadlog", label = "Download log")
+        )
+      ))
+  })
+  
+  #download log client 
+  output$downloadlog <- downloadHandler(
+    filename <- function() {
+      basename(run$log_path)},
     
-    #instructions
-    inst<-getInstructions()
-    
-    output$instructions <- renderUI({
-      inst
-    })
-    
-    
+    content <- function(file) {
+      file.copy(run$log_path, file)
+    }
+  )
+  
+  #instructions
+  inst<-getInstructions()
+  
+  output$instructions <- renderUI({
+    inst
+  })
+  
+  
 }

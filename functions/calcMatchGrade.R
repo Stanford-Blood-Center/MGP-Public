@@ -1,10 +1,10 @@
-#v 1.2.0
+#v 1.3.0
 
 options(warn = 2) 
 
 suppressPackageStartupMessages(library(lgr))
 
-calcMatchGrade<-function(r_itl, d_itl, username){
+calcMatchGrade<-function(r_itl, d_itl, username, credentials){
   
   #set up log file
   log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", r_itl, '_', sep=""), fileext = ".log")
@@ -14,18 +14,25 @@ calcMatchGrade<-function(r_itl, d_itl, username){
   sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
   lgr$info(paste('SUNetID: ', sunetID, sep = ''))
   
+  if(credentials == '30'){
+    lgr$info('***** CALCULATION MODE *****')
+  } else if(credentials %in% c('50', '60')){
+    lgr$info('***** REVIEW MODE *****')
+  }
+  
   tryCatch(
     {
       lgr$info('**********MATCH GRADE EVALUATION START**********')
-      #version 3.55.0 as of 1/31/24
+      #version 3.57.0 as of 7/19/24 (v 1.3.0)
       alignments<<-readRDS('ref/alignments.rda')
       c2_antigen_ref<<-getC2RefAlleles()
       
       lgr$info(paste('Recipient ITL entered:', r_itl))
       
       con<-dbConn()
+
       lgr$info('Successfully connected to the database')
-      
+
       #get Antigen table from DB
       antigen_ref<<-getAntigenTable(con)
       
@@ -80,7 +87,7 @@ calcMatchGrade<-function(r_itl, d_itl, username){
           
           #split any haplotypes into separate alleles
           positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
-
+          
           mfi_vals<-getMFIvals(con, r_itl, testNums)
           
           #if value is blank for average value, all beads in that antigen group have
@@ -174,9 +181,27 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         print(allLoci)
         
         #disable this for real values while testing
-        lgr$info('Updating match values in Match Grade')
-        updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d))
-        lgr$info('Match values successfully updated!')
+        if(credentials == '30'){
+          lgr$info('Updating match values in Match Grade')
+          updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d))
+          lgr$info('Match values successfully updated!')
+        } else if(credentials %in% c('50', '60')){
+          d_mg$ABCDRDQ_match<-ABCDRDQ[1]
+          d_mg$ABCDRDQ_alleles<-ABCDRDQ[2]
+          
+          d_mg$ABCDRB1_match<-ABCDRB1[1]
+          d_mg$ABCDRB1_alleles<-ABCDRB1[2]
+          d_mg$ABCDRB1_mm_GVH<-ABCDRB1[3]
+          d_mg$ABCDRB1_mm_HVG<-ABCDRB1[4]
+          
+          d_mg$DRB345DQDP_match<-DRB345DQDP[1]
+          d_mg$DRB345DQDP_alleles<-DRB345DQDP[2]
+          d_mg$DRB345DQDP_mm_GVH<-DRB345DQDP[3]
+          d_mg$DRB345DQDP_mm_HVG<-DRB345DQDP[4]
+          
+          d_mg$seven_loci_match<-allLoci[1]
+          d_mg$Seven_loci_alleles<-allLoci[2]
+        }
         
         ##### TCE EVALUATIONS #####
         lgr$info('Assessing TCE permissibility...')
@@ -184,9 +209,13 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         
         print(tce)
         if(!is.null(tce)){
-          lgr$info('Finished assessing TCE permissibility!')
-          updateMGtable(con, 'tce', c(tce,d))
-          lgr$info('TCE value successfully updated!')
+          if(credentials == '30'){
+            lgr$info('Finished assessing TCE permissibility!')
+            updateMGtable(con, 'tce', c(tce,d))
+            lgr$info('TCE value successfully updated!')
+          } else if(credentials %in% c('50', '60')){
+            d_mg$DRB345DQDP_mm_TCE<-tce
+          }
         }
         
         ##### DSA EVALUATIONS #####
@@ -210,18 +239,22 @@ calcMatchGrade<-function(r_itl, d_itl, username){
         
         lgr$info(paste('DSA:', DSA))
         
-        lgr$info('Updating DSA in Match Grade')
-        updateMGtable(con, 'dsa', c(DSA, d))
-        lgr$info('Finished updating DSA in Match Grade')
+        if(credentials == '30'){
+          lgr$info('Updating DSA in Match Grade')
+          updateMGtable(con, 'dsa', c(DSA, d))
+          lgr$info('Finished updating DSA in Match Grade')
+        } else if(credentials %in% c('50', '60')){
+          d_mg$DSA<-DSA
+        }
         
         lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d, '*****', sep=''))
       }
-      return(c(TRUE, log))
+      return(list('TRUE', log, d_mg[c(36:49)]))
       
     },
     error = function(e){
       lgr$fatal(e)
-      return(c(FALSE, log))
+      return(list('FALSE', log, NULL))
     }
   )
 }
