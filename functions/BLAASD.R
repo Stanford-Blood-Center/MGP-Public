@@ -10,7 +10,6 @@
 #'
 #'@importFrom stringr str_squish str_split
 #'@importFrom utils head tail capture.output
-#'@importFrom BIGDAWG GetField
 #'@importFrom dplyr filter %>%
 #'@export
 #'
@@ -25,7 +24,6 @@
 #'\donttest{BLAASD(c("A", "B", "C"))}
 #'
 library(stringr)
-library(BIGDAWG)
 library(dplyr)
 library(tibble)
 
@@ -160,8 +158,8 @@ BLAASD<-function(loci, version = "Latest"){
         #how many "." to add on
         #change made 2/28/22
         max_nchar<-unique((temp_filter %>%
-                      add_column(nchar = nchar(.$pepseq)) %>%
-                      filter(nchar == max(nchar)))$nchar)
+                             add_column(nchar = nchar(.$pepseq)) %>%
+                             filter(nchar == max(nchar)))$nchar)
         x<-cbind.data.frame(x, pepseq=as.character(paste(rep(".", max_nchar), collapse = "")), stringsAsFactors=FALSE)
         y<-data.frame(tail(alignment[[loci[i]]], (nrow(alignment[[i]][start[[loci[i]]][k]:end[[loci[i]]][k],][nrow(alignment[[i]][start[[loci[i]]][k]:end[[loci[i]]][k],])!=nrow(alignment[[loci[i]]][start[[loci[i]]][1]:end[[loci[i]]][1],]),])-2)), stringsAsFactors = F)
         x$pepseq[match(y[,1], x[,1])]<-y$pepseq
@@ -187,10 +185,9 @@ BLAASD<-function(loci, version = "Latest"){
     
     #if the first position enumeration is negative (i.e. has a leader peptide sequence), determines alignment length based on the total number of characters plus the alignment start (which is negative)
     if(grepl("-", alignment_start[[loci[i]]][[1]])==TRUE){
-      alignment_length[[loci[i]]]<-as.numeric(nchar(HLAalignments[[loci[i]]][,2][1]))+alignment_start[[loci[[i]]]]}
-    
-    #if there is no leader peptide (i.e sequence starts at 1), determines alignment length based on total number of characters
-    else{
+      alignment_length[[loci[i]]]<-as.numeric(nchar(HLAalignments[[loci[i]]][,2][1]))+alignment_start[[loci[[i]]]]
+    } else{
+      #if there is no leader peptide (i.e sequence starts at 1), determines alignment length based on total number of characters
       alignment_length[[loci[i]]]<-as.numeric(nchar(HLAalignments[[loci[i]]][,2][1]))
     }
     
@@ -213,8 +210,12 @@ BLAASD<-function(loci, version = "Latest"){
     #assigns to new variable "AA_aligned"
     AA_aligned[[loci[i]]]<- as.matrix(do.call(rbind,strsplit(HLAalignments[[loci[i]]][,1],"[*]")))
     
+    split<-strsplit(AA_aligned[[loci[i]]][,2], ':')
+    
+    twoField<-lapply(split, function(x) ifelse((grepl('[A-Z]', str_sub(x[length(x)], -1)) & length(x) > 2),  paste(paste(x[[1]], x[[2]], sep = ':'), str_sub(x[length(x)], -1), sep = ''), paste(x[[1]], x[[2]], sep = ':')))
+    
     #adds a new column of pasted locus and trimmed two field alleles to AA_aligned
-    AA_aligned[[loci[i]]]<- cbind(AA_aligned[[loci[i]]], paste(AA_aligned[[loci[i]]][,1], apply(AA_aligned[[loci[i]]],MARGIN=c(1,2),FUN=GetField,Res=2)[,2], sep="*"))
+    AA_aligned[[loci[i]]]<- cbind(AA_aligned[[loci[i]]], paste(AA_aligned[[loci[i]]][,1], twoField, sep="*"))
     
     #binds AA_aligned and HLAalignments -- renames columns
     HLAalignments[[loci[i]]] <- cbind(AA_aligned[[loci[i]]], HLAalignments[[loci[i]]])
@@ -296,22 +297,22 @@ BLAASD<-function(loci, version = "Latest"){
       #adds increments of .1 to any InDels
       for(g in 1:length(vsplit)){
         corr_table[[loci[[i]]]][2,][vsplit[[g]]]<-paste(corr_table[[loci[[i]]]][2,][vsplit[[g]][[1]]-1], paste(".", seq(1, length(vsplit[[g]])), sep=""), sep ="")
-        }
       }
-      
-      #renames columns in HLAalignments
-      colnames(HLAalignments[[loci[i]]]) <- c("locus","allele","trimmed_allele","allele_name", corr_table[[loci[[i]]]][2,])
-      
-      #distributes  reference sequence from row 1
-      #into all other rows, if they contain a "-"
-      #amino acids with changes will not be impacted
-      for(k in 5:ncol(HLAalignments[[loci[i]]])) {
-        HLAalignments[[loci[i]]][,k][which(HLAalignments[[loci[i]]][,k]=="-")] <- HLAalignments[[loci[i]]][,k][1]}
     }
     
-    #replace all Xs in prematurely terminated alleles with "."
-    HLAalignments[[loci[[i]]]]<-HLAalignments[[loci[[i]]]] %>% 
-      mutate_all(list(~str_replace(., "X", ".")))
+    #renames columns in HLAalignments
+    colnames(HLAalignments[[loci[i]]]) <- c("locus","allele","trimmed_allele","allele_name", corr_table[[loci[[i]]]][2,])
+    
+    #distributes  reference sequence from row 1
+    #into all other rows, if they contain a "-"
+    #amino acids with changes will not be impacted
+    for(k in 5:ncol(HLAalignments[[loci[i]]])) {
+      HLAalignments[[loci[i]]][,k][which(HLAalignments[[loci[i]]][,k]=="-")] <- HLAalignments[[loci[i]]][,k][1]}
+  }
+  
+  #replace all Xs in prematurely terminated alleles with "."
+  HLAalignments[[loci[[i]]]]<-HLAalignments[[loci[[i]]]] %>% 
+    mutate_all(list(~str_replace(., "X", ".")))
   
   HLAalignments<-c(HLAalignments, `ANHIG/IMGTHLA Alignments Version` = alignmentVersion[[loci[[1]]]])
   

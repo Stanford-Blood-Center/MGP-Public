@@ -1,3 +1,13 @@
+MGP v 1.3.0 7/19/2024
+-------------------
+  *Added review functionality to MGP. Users with Supervisor or Director level access
+  will only be able to review what is populated in the Match Grade Software and what 
+  is calculated by MGP, where any discrepancies between the two tables are noted. Users
+  with technologist level access will only be able to perform calculations with MGP.
+  *Updated alignments to v 3.57.0
+  *Modified BLAASD to append the suffix to any suffix alleles in the trimmed_allele columns.
+  Suffixes were not captured previously for suffix alleles > 2 fields
+
 MGP v 1.2.0 6/10/2024
 -------------------
   *Minor change to logic to calculate the total number of mismatches. Instead of
