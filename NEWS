@@ -1,3 +1,8 @@
+MGP v 1.3.1 8/19/2024
+-------------------
+  *Updated NMDP reference file
+  *Added logic to log if an NMDP code is not found
+
 MGP v 1.3.0 7/19/2024
 -------------------
   *Added review functionality to MGP. Users with Supervisor or Director level access

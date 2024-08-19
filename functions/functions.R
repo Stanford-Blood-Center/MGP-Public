@@ -1,5 +1,5 @@
 #external functions
-#v 1.1.1
+#v 1.3.1
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -197,18 +197,31 @@ convertNMDP<-function(n_alleles){
   f2<-sapply(strsplit(n_alleles, ':'), '[[', 2) 
   
   donor_st<-sapply(f1, function(x) NULL)
+  nonexistentNMDP<-c()
   
   for(i in 1:length(f2)){
-    donor_st[[i]]<-nmdp_file %>%
+    
+    nmdpFilter<-nmdp_file %>%
       filter(code %in% c(f2[[i]])) %>%
       pull() %>%
       strsplit('/') %>%
       unlist()
     
-    #paste first field to subtype if not present in NDMP codelist
-    if(any(!grepl(':', donor_st[[i]]))){
-      donor_st[[i]]<-paste(names(donor_st)[[i]], donor_st[[i]], sep =":")
+    if(!is.null(nmdpFilter)){
+      donor_st[[i]]<-nmdpFilter
+      
+      #paste first field to subtype if not present in NDMP codelist
+      if(any(!grepl(':', donor_st[[i]]))){
+        donor_st[[i]]<-paste(names(donor_st)[[i]], donor_st[[i]], sep =":")
+      }
+    } else{
+      lgr$info(paste(f2[[i]], 'was not found in the NMDP reference file'))
+      nonexistentNMDP<-append(f2[[i]], nonexistentNMDP)
     }
+  }
+  
+  if(!is.null(nonexistentNMDP)){
+    stop('NMDP alleles not found in the NMDP reference file')
   }
   
   return(unlist(donor_st, use.names=F))
@@ -557,7 +570,7 @@ calcABCDRB<-function(cat, d_hla, r_hla){
       mismatches<-mismatches+max(gvh[[a]], hvg[[a]])
       
     }
-
+    
     matches<-total-mismatches
     
     return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles))
