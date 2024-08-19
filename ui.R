@@ -1,22 +1,23 @@
 #ui
 #by: Livia Tran
-#v1.3.1
+#v1.4.0
 
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(shinythemes))
 suppressPackageStartupMessages(library(shinyjs))
 suppressPackageStartupMessages(library(shinyWidgets))
-suppressPackageStartupMessages(library(shinycssloaders))
+suppressPackageStartupMessages(library(shinybusy))
 
-ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.3.1', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
-                 
+source('functions/executeMGP.R')
+
+ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.4.0', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
                  
                  #main tab 
                  tabPanel("Main",
-                          
+              
                           #enable shinyjs
                           useShinyjs(),
-                          
+
                           #sidebar layout 
                           sidebarLayout(
                             sidebarPanel(
@@ -34,16 +35,16 @@ ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.3.1', collapsible 
                                   actionButton('run', 'Run MGP'),
                                   actionButton('clear', 'Clear Inputs'),
                                   align='center')), 
-                              uiOutput('log')
+                              uiOutput('sideLog')
                             ),
-                            
+
                             #main panel
                             mainPanel(
-                              #style=paste('font-size: 20px; "flex-grow:1; resize:horizontal; overflow: hidden"'),
+                              div(class='spinnerBox', use_busy_spinner(spin = 'intersecting-circles', color = '#DC143C')),
                               textOutput('p_itl'),
                               textOutput('p_check'),
                               textOutput('p_itl_oops'),
-                              uiOutput('spinner')
+                              uiOutput('mainPanel')
                             )
                           )),
                  

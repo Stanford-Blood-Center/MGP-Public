@@ -41,6 +41,27 @@ hr {
     height: 1px;
 }
 
+.spinnerBox{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
 .col-sm-8 {
-  font-size: 20px;
+    font-size: 20px;
+}
+
+.shinybusy-busy {
+    top: 100px !important;
+    position: relative;
+}
+
+.modal-title {
+    text-align: center;
+    width: 100%;
+}
+
+.control-label {
+  white-space: nowrap;
 }

@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.3.1</b></i></h6>
+    <h6><i><b>Version 1.4.0</b></i></h6>
     <br>
 
     <div class='instruction'>
@@ -15,6 +15,7 @@ getInstructions<-function(){
             section of Match Grade to the middle window of the program. If the recipient of interest does not have IgG tests, 
             do <u>NOT</u> populate the 'Recipient DSA Date' field. Otherwise, please make sure the 'Recipient DSA Date' is populated 
             in the Match Grade application; this is required for DSA evaluation.</b>
+        <br>
         <br>
         <u>Note:</u> 'Clear Inputs' can be clicked at any time to reset all fields back to their initial states.
     </div>
@@ -38,9 +39,16 @@ getInstructions<-function(){
     </div>
 
     <div class='instruction'>
-        <b>4)</b> Click on the 'Run MGP' button to begin evaluation. Oscillating red lines in the main panel will appear
+        <b>4)</b> Click on the 'Run MGP' button to begin evaluation. A red, busy spinner will appear in the main panel
         while the program is running. If there are no errors and the run was successful, a message indicating completion
         will appear. Results will be available for review in the Match Grade application. If the job failed, an error message will appear.
+    </div>
+    
+    <div class='instruction'>
+        <b>4a)</b> If the recipient and/or donor has novel alleles, a window with some questions will appear for each novel allele. The window title will indicate
+        which novel allele is being referenced. The first question is what position the mutation in the novel allele is at. Click 'Submit' after inputting
+        the position. If the position is in the antigen recognition domain, a second question asking if the mutation is synonymous or non-synonymous will appear. A 'Next' button
+        will be present if there are multiple novel alleles. A 'Finish' button will be present for the final novel allele. 
     </div>
 
     <div class='instruction'>
