@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.3.0
+#v1.3.1
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
