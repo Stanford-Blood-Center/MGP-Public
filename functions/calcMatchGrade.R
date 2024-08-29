@@ -155,7 +155,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       #disable this for real values while testing
       if(credentials == '30'){
         lgr$info('Updating match values in Match Grade')
-        updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d))
+        updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d_itl))
         lgr$info('Match values successfully updated!')
       } else if(credentials %in% c('50', '60')){
         d_mg$ABCDRDQ_match<-ABCDRDQ[1]
@@ -183,7 +183,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       if(!is.null(tce)){
         if(credentials == '30'){
           lgr$info('Finished assessing TCE permissibility!')
-          updateMGtable(con, 'tce', c(tce,d))
+          updateMGtable(con, 'tce', c(tce,d_itl))
           lgr$info('TCE value successfully updated!')
         } else if(credentials %in% c('50', '60')){
           d_mg$DRB345DQDP_mm_TCE<-tce
@@ -213,7 +213,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       
       if(credentials == '30'){
         lgr$info('Updating DSA in Match Grade')
-        updateMGtable(con, 'dsa', c(DSA, d))
+        updateMGtable(con, 'dsa', c(DSA, d_itl))
         lgr$info('Finished updating DSA in Match Grade')
       } else if(credentials %in% c('50', '60')){
         d_mg$DSA<-DSA
