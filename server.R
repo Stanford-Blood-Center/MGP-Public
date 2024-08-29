@@ -1,19 +1,34 @@
 #server
 #by: Livia Tran
-#v1.3.1
+#v1.4.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(DBI))
 suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(shinybusy))
 
 source('functions/functions.R')
 source('functions/calcMatchGrade.R')
 source('functions/instructions.R')
+source('functions/refreshModal.R')
+source('functions/executeMGP.R')
 
 server <- function(input, output, session) {
   
+  disable('validate')
+  
+  observe({
+    req(!is.null(input$username))
+    
+    if(input$username != ''){
+      enable('validate')
+    } else{
+      disable('validate')
+    }
+  })
+
   validate_modal <- modalDialog(
     textInput('username', 'mTilda username', ''),
     textOutput('username_not_found'),
@@ -22,7 +37,7 @@ server <- function(input, output, session) {
       actionButton("validate", "Validate username")
     )
   )
-  
+
   showModal(validate_modal)
   
   disable('query_donor')
@@ -58,27 +73,25 @@ server <- function(input, output, session) {
   
   #clear button logic
   observeEvent(input$clear, {
+    
     disable('run')
     enable('p_itl')
-    updateTextInput(session, "p_itl", value="")
+    isolate(updateTextInput(session, "p_itl", value=""))
     output$d_check <- NULL
     output$p_check <- NULL
     output$q_check <- NULL
     output$donor_itl <- NULL
     output$p_itl_oops <- NULL
-    output$log <- NULL 
-    output$finish_text <- NULL
-    output$mgTable<-NULL
-    output$mgPopulationTable<-NULL
-    output$comparisonText<-NULL
-    run$result<-NULL
-    run$log_path<-NULL
-    run$df<-NULL
-    run$mgpTable<-NULL
-    run$mgDBTable<-NULL
-    output$spinner <- NULL
+    novel$syn <- NULL
+    novel$position<-NULL
+    novel$click<-1
+    novel$selection_syn<-NULL
+    output$synonymousQuestion<-NULL
+    output$mainPanel<-NULL
+    output$sideLog<-NULL
+    
   })
-  
+
   donor<-reactiveValues(selection=NULL, donorDF=NULL)
   
   #donor selection
@@ -126,6 +139,12 @@ server <- function(input, output, session) {
     
   })
   
+  patient<-reactiveValues(itl=NULL)
+  
+  observeEvent(input$p_itl, {
+    patient$itl<-isolate(input$p_itl)  
+  })
+  
   #save donor selected ITLs to a reactive value
   observeEvent(input$d_itl, {
     
@@ -145,148 +164,142 @@ server <- function(input, output, session) {
     
   })
   
-  run<-reactiveValues(result=NULL, log_path=NULL, df=NULL, mgpTable=NULL, mgDBTable=NULL)
+  novel<-reactiveValues(syn=NULL, position=NULL, click=1, selection_syn = list(), region_list = list(), totalAlleles = NULL, listNames = NULL, region = NULL)
+  hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL)
+  counter <- reactiveVal(1)
   
   #run MGP button logic
   observeEvent(input$run, {
     
-    if(username$creds == '30'){
-      output$spinner <- renderUI({
-      withSpinner(uiOutput('finish_text'), color='#DC143C')
+    show_spinner()
+    
+    con<-dbConn()
+    
+    mg<-getMatchGrade(con, patient$itl)
+    lgr$info('Match Grade data extracted')
+    r_mg<-mg %>%
+      filter(donor_number == patient$itl)
+    recip_Typing<-getTyping(con, r_mg, type = 'r')
+    lgr$info('Recipient typing extracted')
+
+    hla$recip<-recip_Typing[[1]]
+    hla$recipNull<-recip_Typing[[2]]
+    recip_novel_alleles<- recip_Typing[[3]]
+
+    hla$dMG<-mg %>%
+      filter(donor_number == donor$selection)
+    donor_Typing<-getTyping(con, hla$dMG, type = 'd')
+
+    lgr$info('Donor typing extracted')
+    
+    hla$donor<-donor_Typing[[1]]
+
+    donor_novel_alleles<-donor_Typing[[3]]
+    
+    novel$totalAlleles<-c(recip_novel_alleles, donor_novel_alleles)
+  
+    if(!is.null(novel$totalAlleles)){
+      hide_spinner()
+      novel$listNames<-gsub('Recipient: |Donor: ', '', novel$totalAlleles)
+      refreshModal(novel$totalAlleles, novel$click)
+      
+    } else{
+      
+      module_id<-generateID(counter())
+      counter(counter() + 1)
+      
+      output$mainPanel <- renderUI({
+        executeMGPUI(module_id, 'spinner')
+      })
+      
+      output$sideLog <- renderUI({
+        executeMGPUI(module_id, 'log')
+      })
+      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, username$log, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG)
+    }
+  })
+  
+  observeEvent(input$finish,{
+    removeModal()
+
+    show_spinner()
+    module_id<-generateID(counter())
+    counter(counter() + 1)
+    
+    output$mainPanel <- renderUI({
+      executeMGPUI(module_id, 'spinner')
     })
     
-    } else if(username$creds %in% c('50', '60')){
-      output$spinner <-renderUI({
-        withSpinner(tagList(uiOutput('comparisonText'), uiOutput('mgTable'), uiOutput('mgPopulationTable')), color='#DC143C')
-      })
-    }
+    output$sideLog <- renderUI({
+      executeMGPUI(module_id, 'log')
+    })
     
-    if(username$creds == '30'){
-      
-      output$finish_text<-renderUI({
-        run_res<-calcMatchGrade(input$p_itl, donor$selection, username$log, username$creds)
-        
-        run$result<-run_res[[1]]
-        run$log_path<-run_res[[2]]
-        
-        if(run$result){
-          message<-paste('Match Grade evaluations for recipient ITL', input$p_itl, 'completed!')
-          lgr$info(message)
-          lgr$info('**********MATCH GRADE EVALUATION END**********')
-          message
-        } else{
-          message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
-          lgr$info(sprintf(message, paste(input$p_itl, 'failed'), 'livtran@stanford.edu'))
-          lgr$info('**********MATCH GRADE EVALUATION END**********')
-          HTML(sprintf(message, paste(input$p_itl, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
-        }
-      })
-    } else if(username$creds %in% c('50', '60')){
-      
-        #MGP output
-        output$mgTable<-renderUI({
-          
-          run_res<-calcMatchGrade(input$p_itl, donor$selection, username$log, username$creds)
-          
-          run$result<-run_res[[1]]
-          run$log_path<-run_res[[2]]
-          run$df<-run_res[[3]]
-          
-          if(run$result){
-            run$mgpTable<-run$df %>% replace(is.na(.), '')
-            
-            tagList(
-              hr(),
-              h3('MGP Results', style = "text-align: center; font-weight: bold;"),
-              DT::renderDT(run$mgpTable, options = list(dom = 't', scrollX = TRUE), rownames = FALSE), 
-              br())
-          } else{
-            message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
-            lgr$info(sprintf(message, paste(input$p_itl, 'failed'), 'livtran@stanford.edu'))
-            lgr$info('**********MATCH GRADE EVALUATION END**********')
-            HTML(sprintf(message, paste(input$p_itl, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
-          }
-        })
-        
-          #MG DB
-          output$mgPopulationTable<-renderUI({
-            req(run$result)
-            if(run$result == 'TRUE'){
-              con <- dbConn()
-              
-              mgPopulationTable <- dbGetQuery(con, sprintf("SELECT DSA, ABCDRDQ_alleles, ABCDRDQ_match, 
-                                                   ABCDRB1_alleles, ABCDRB1_match, ABCDRB1_mm_GVH, ABCDRB1_mm_HVG, 
-                                                   DRB345DQDP_alleles, DRB345DQDP_match, DRB345DQDP_mm_GVH, DRB345DQDP_mm_HVG,
-                                                   DRB345DQDP_mm_TCE, Seven_loci_alleles, seven_loci_match
-                                                   FROM dbo.Match_grades 
-                                                   WHERE recipient_number = %s and donor_number = %s", input$p_itl, donor$selection))
-              
-              dbDisconnect(con)
-              
-              #remove any trailing spaces
-              mgPopulationTable<-as.data.frame(lapply(mgPopulationTable, str_trim), stringsAsFactors = F)
-              #make read in data numeric types numeric
-              mgPopulationTable[,c(2:11, 13:length(mgPopulationTable))]<-lapply(mgPopulationTable[, c(2:11, 13:length(mgPopulationTable))], as.numeric)
-              #replace any NAs with ''
-              run$mgDBTable<-mgPopulationTable %>% replace(is.na(.), '')
-              
-              tagList(
-                hr(),
-                h3('Match Grade Results', style = "text-align: center; font-weight: bold;"),
-                DT::renderDT(run$mgDBTable, options = list(dom = 't', scrollX = TRUE), width = '25%', rownames = FALSE))
-            } else{
-              NULL
-            }
-          })
-          
-          #difference comparison output
-          output$comparisonText<-renderUI({
-            req(run$result)
-            if(run$result == 'TRUE'){
-              
-              comparison<-all.equal(run$mgDBTable, run$mgpTable)
-              
-              baseText<-"<b>Mismatched columns: </b>"
-              
-              if(length(comparison)==1 & any(!grepl('Component', comparison))){
-                comparison<-paste(baseText, ' None', sep = '')
-              } else{ 
-                #[\u201C\u201D] = curly quotes
-                comparison<-paste(baseText, paste(gsub("[\u201C\u201D]", "", str_extract(comparison, "(?<=Component )[^:]+")), collapse = ', '), sep = '')
-              }
-              HTML(paste0('<div style="text-align: center;">', comparison, '</div>'))
-            } else{
-              NULL
-            }
+    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, username$log, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG)
 
-          })
-        } 
-    
   })
   
+  #next button
+  observeEvent(input$nextButton, {
+    novel$position <- NULL
+    novel$click <- novel$click + 1
+    removeModal()
+    output$synonymousQuestion <- NULL
+    refreshModal(novel$totalAlleles, novel$click)
+  })
+
+  observeEvent(input$syn_nonsyn,{
+    novel$selection_syn[[novel$listNames[novel$click]]]<-input$syn_nonsyn
+  })
   
-  #download log UI
+  # #enable/disable button logic for 'Submit' button 
   observe({
-    req(run$result)
-    output$log<-renderUI(
-      tagList(
-        hr(),
-        div(style="text-align:center;", 
-            downloadButton("downloadlog", label = "Download log")
-        )
-      ))
+    req(!is.null(novel$region))
+
+    if(novel$region == ""){
+      disable('submit')
+    } else{
+      enable('submit')
+    }
   })
   
-  #download log client 
-  output$downloadlog <- downloadHandler(
-    filename <- function() {
-      basename(run$log_path)},
+  #enable/disable button logic for 'Next' and 'Close' buttons
+  observe({
+    req(!is.null(novel$position))
     
-    content <- function(file) {
-      file.copy(run$log_path, file)
+    if(novel$position==FALSE){
+      shinyjs::enable('nextButton')
+      shinyjs::enable('finish')
+    } else{
+      if(!is.null(input$syn_nonsyn)){
+        shinyjs::enable('nextButton')
+        shinyjs::enable('finish')
+      }
     }
-  )
+  })
   
+   observeEvent(input$region,{
+     novel$region<-input$region
+   })
+  
+  observeEvent(input$submit,{
+    locus<-str_extract(novel$listNames[novel$click], '(?<=-)[^//*]+')
+    novel$position<-determinePosition(novel$region, locus)
+
+    shinyjs::hide('submit')
+    
+    output$synonymousQuestion<-renderUI({
+      if(novel$position == TRUE){
+        br()
+        br()
+        radioButtons('syn_nonsyn', 'Is the mutation in the novel allele synonymous?', c('Yes' = 'y', 'No' = 'n'), selected = character(0))
+      }
+    })
+    
+    #prevent flickering after clear button
+    outputOptions(output, "synonymousQuestion", suspendWhenHidden = FALSE)
+    
+  })
+
   #instructions
   inst<-getInstructions()
   

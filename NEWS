@@ -1,8 +1,21 @@
+MGP v 1.4.0 8/29/24
+-------------------
+  *Added novel allele handling functionality. Novel alleles will prompt a window
+  to appear, asking questions to help determine the nature of the mutation of
+  the novel allele
+  *Code refactoring
+  *Modularized running calcMatchGrade for usage w 'finish' in pop up window and 'run'
+  *Added check for if NMDP codes are not found. Log NMDP alleles not found and stop
+  execution
+  *Revised the NMDP reference file naming convention to nmdp-lastupdateddateperfile.rda
+  *Updated NMDP reference file - nmdp-8-16-24.rda
+  *Changed busy spinner
+
 MGP v 1.3.1 8/19/2024
 -------------------
   *Updated NMDP reference file
   *Added logic to log if an NMDP code is not found
-
+  
 MGP v 1.3.0 7/19/2024
 -------------------
   *Added review functionality to MGP. Users with Supervisor or Director level access

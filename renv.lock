@@ -1960,19 +1960,18 @@
       ],
       "Hash": "96bb249d21b7473dbeb0311702ef5288"
     },
-    "shinycssloaders": {
-      "Package": "shinycssloaders",
-      "Version": "1.0.0",
+    "shinybusy": {
+      "Package": "shinybusy",
+      "Version": "0.3.3",
       "Source": "Repository",
       "Repository": "CRAN",
       "Requirements": [
-        "R",
-        "digest",
-        "glue",
-        "grDevices",
+        "htmltools",
+        "htmlwidgets",
+        "jsonlite",
         "shiny"
       ],
-      "Hash": "f39bb3c44a9b496723ec7e86f9a771d8"
+      "Hash": "7dc8feb4207741ff581422a04fc8f3ea"
     },
     "shinyjs": {
       "Package": "shinyjs",

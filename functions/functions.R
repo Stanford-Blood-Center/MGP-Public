@@ -1,5 +1,5 @@
 #external functions
-#v 1.3.1
+#v 1.4.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -49,19 +49,16 @@ getDonors<-function(mg_df){
   return(donors)
 }
 
-#filter to specific donor
-filterDonor<-function(mg_df, d_itl){
-  d_all<-mg_df %>%
-    filter(donor_number == d_itl) 
-  return(d_all)
-}
-
 #get HLA typing
 #transform loci columns into rows, populate homozygous alleles
-getTyping<-function(input_df, type){
+getTyping<-function(con, mgDF, type){
+  
+  #version 3.57.0 as of 7/19/24 (v 1.3.0)
+  alignments<<-readRDS('ref/alignments.rda')
+  
   hla_cols <- sort(do.call(paste, c(expand.grid(c('a', 'b', 'c', 'dr', 'drp', 'dqa', 'dqb', 'dpa', 'dpb'), c(1,2)), sep = '_')))
   
-  t_df <- input_df %>%
+  t_df <- mgDF %>%
     select(all_of(hla_cols)) %>%
     mutate(id = row_number()) %>%
     pivot_longer(-id) %>%
@@ -138,9 +135,32 @@ getTyping<-function(input_df, type){
   
   #if a locus has heterozygous alleles and does not have NMDP alleles, 
   #check if they have the same P group
+  #skip NMDP, NAs, and novel alleles (denoted by @ suffix)
   residue<-NULL
+  novelAllelesAll<-c()
+  
   for(j in colnames(t_df)){
-    if(!any(grepl(':[A-WYZ]', t_df[,j])) & !all(is.na(t_df[,j]))){
+
+    if(any(grepl('@', t_df[,j]))){
+      if(j == 'DRB'){
+        delimit <- ''
+      } else{
+        delimit <- '*'
+      }
+      
+      if(type == 'r'){
+        prefix = 'Recipient'
+      } else{
+        prefix = 'Donor'
+      }
+      
+      novelAlleles<-paste('HLA-', j, delimit, t_df[,j][grepl('@', t_df[,j])], sep = '')
+      lgr$info(sprintf('%s: Novel allele %s detected', prefix, novelAlleles))
+      #capture all novel alleles 
+      novelAllelesAll<-append(novelAllelesAll, paste(prefix, novelAlleles, sep=': '))
+    }
+    
+    if(!any(grepl(':[A-WYZ]', t_df[,j])) & !any(grepl('@', t_df[,j])) & !all(is.na(t_df[,j]))){
       
       if(t_df[1,j] != t_df[2,j]){
         
@@ -174,21 +194,23 @@ getTyping<-function(input_df, type){
           pull()
         
         #if two alleles in the same locus have the same P group, it is effectively
-        #homozygous. replace the second allele with the first one 
+        #homozygous. replace the second allele with the first one for recipient
         if(s_pg_alleles){
+          if(type == 'r'){
           lgr$info(paste(align_locus, 'has 2 alleles with the same P-group. Replacing', t_df[2,j], 'with', t_df[1,j]))
           t_df[2,j]<-t_df[1,j]
+          }
         }
       }
     }
   }
-  
   t_df<-t_df %>%
     rowwise() %>%
     mutate(across(everything(), ~ifelse(!is.na(.), ifelse(cur_column()=="DRB", paste(cur_column(), ., sep = ""), paste(cur_column(), ., sep = "*")), .)))
   
-  return(list(t_df, r_null_allele))
+  return(list(t_df, r_null_allele, novelAllelesAll))
 }
+
 
 #convert NMDP code to subtype 
 convertNMDP<-function(n_alleles){
@@ -323,7 +345,7 @@ getTCE<-function(d_hla, r_hla){
 #'ABC' - HLA-A, B, C
 #'DRP' - HLA-DRB3/4/5
 #'DR' - HLA-DRB1
-calcABCDRB<-function(cat, d_hla, r_hla){
+calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   
   residue<-90
   
@@ -403,25 +425,90 @@ calcABCDRB<-function(cat, d_hla, r_hla){
   total<-matches<-length(d_alleles)
   
   gvh<-hvg<-sapply(group, function(x) 0)
-  
+
   if(all(d_alleles %in% r_alleles) & all(r_alleles %in% d_alleles)){
     return(list(c(total, matches, 0, 0), NULL))
     
   } else{
     
+    nmdp_flag<-reg_flag<-FALSE
+    
+    #novel allele handling - recipient
+    if(any(grepl('@', r_alleles))){
+
+      recip_novel_alleles<-r_alleles[grepl('@', r_alleles)]
+      
+      for(i in recip_novel_alleles){
+        
+        
+        novelFull<-paste('HLA-', i, sep ='')
+        
+        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
+        #move onto the next novel allele and remove @ sign
+        
+        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), keep @ sign
+        
+        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
+        #move onto the next allele and remove @ sign from novel allele
+        if(novelFull %in% names(synqList)){
+          if(synqList[[novelFull]] == 'y'){
+            r_alleles[r_alleles == i]<-gsub('@', '', i)
+            next
+          } else{
+            next
+          }
+        } else{
+          r_alleles[r_alleles == i]<-gsub('@', '', i)
+          next
+        }
+      }
+    }
+    
+    #novel allele handling - donor
+    if(any(grepl('@', d_alleles))){
+
+      donor_novel_alleles<-d_alleles[grepl('@', d_alleles)]
+      
+      for(i in donor_novel_alleles){
+        
+        novelFull<-paste('HLA-', i, sep ='')
+        
+        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
+        #move onto the next novel allele 
+        
+        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), count as MM
+        #for hvg
+        
+        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
+        #move onto the next allele
+        if(novelFull %in% names(synqList)){
+          
+          if(synqList[[novelFull]] == 'y'){
+            d_alleles[d_alleles == i]<-gsub('@', '', i)
+            next
+          } else{
+            next
+          }
+        } else{
+          d_alleles[d_alleles == i]<-gsub('@', '', i)
+          next
+        }
+      }
+    }
+    
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
-    nmdp_flag<-reg_flag<-FALSE
     
     ##GvH calculation
     for(i in r_mm_alleles){
-      
+     
       nmdp_flag<-reg_flag<-FALSE
       
       if(i==''){
         gvh[['DRB']]<-0
         next
-      }
+      } 
+      
       
       align_locus<-mm_locus<-gsub('^(.*?)\\*.*$', '\\1', i)
       
@@ -579,7 +666,7 @@ calcABCDRB<-function(cat, d_hla, r_hla){
 }
 
 #calculate matches for DQ and DP
-calcDQDP<-function(cat, d_hla, r_hla){
+calcDQDP<-function(cat, d_hla, r_hla, synqList){
   
   group<-paste(cat, c('A1', 'B1'), sep = "")
   
@@ -615,9 +702,73 @@ calcDQDP<-function(cat, d_hla, r_hla){
     return(list(c(total, matches, 0, 0), NULL))
   } else{
     
+    nmdp_flag<-reg_flag<-FALSE
+    
+    #novel allele handling - recipient
+    if(any(grepl('@', r_alleles))){
+      
+      recip_novel_alleles<-r_alleles[grepl('@', r_alleles)]
+      
+      for(i in recip_novel_alleles){
+        
+        
+        novelFull<-paste('HLA-', i, sep ='')
+        
+        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
+        #move onto the next novel allele and remove @ sign
+        
+        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), keep @ sign
+        
+        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
+        #move onto the next allele and remove @ sign from novel allele
+        if(novelFull %in% names(synqList)){
+          if(synqList[[novelFull]] == 'y'){
+            r_alleles[r_alleles == i]<-gsub('@', '', i)
+            next
+          } else{
+            next
+          }
+        } else{
+          r_alleles[r_alleles == i]<-gsub('@', '', i)
+          next
+        }
+      }
+    }
+    
+    #novel allele handling - donor
+    if(any(grepl('@', d_alleles))){
+      
+      donor_novel_alleles<-d_alleles[grepl('@', d_alleles)]
+      #browser()
+      for(i in donor_novel_alleles){
+        
+        novelFull<-paste('HLA-', i, sep ='')
+        
+        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
+        #move onto the next novel allele 
+        
+        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), count as MM
+        #for hvg
+        
+        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
+        #move onto the next allele
+        if(novelFull %in% names(synqList)){
+          
+          if(synqList[[novelFull]] == 'y'){
+            d_alleles[d_alleles == i]<-gsub('@', '', i)
+            next
+          } else{
+            next
+          }
+        } else{
+          d_alleles[d_alleles == i]<-gsub('@', '', i)
+          next
+        }
+      }
+    }
+    
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
-    nmdp_flag<-reg_flag<-FALSE
     
     ##GvH calculation
     for(i in r_mm_alleles){
@@ -817,6 +968,11 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
   
   for(t in mismatched_alleles){
     
+    #if any novel alleles, 
+    if(grepl('@', t)){
+      t<-gsub('@', '', t)
+    }
+    
     #skip if 'Q' suffix
     if(str_sub(t, -1) =='Q' & str_count('Q', '[[:alpha:]]') == 1){
       lgr$info(sprintf('Skipping %s for DSA analysis', t))
@@ -926,4 +1082,29 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
   }
   
   return(call_dsa)
+}
+
+#determine if mutation for novel position is in antigen recognition domain 
+determinePosition<-function(position, locus){
+  
+  #class 1
+  if(locus %in% c('A', 'B', 'C')){
+    if(position %in% seq(1, 182)){
+      return(TRUE)
+    } else{
+      return(FALSE)
+    }
+    #class 2
+  } else{
+    if(position %in% seq(1, 90)){
+      return(TRUE)
+    } else{
+      return(FALSE)
+    }
+  }
+}
+
+#generate module ID
+generateID<-function(count){
+  module_id<-paste0("module_", count)
 }

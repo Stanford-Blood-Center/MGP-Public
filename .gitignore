@@ -2,6 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
+*-setenvvar.R
+*-updateNMDPtemp.R
 
 # Ignore Vi/Vim temporary files
 *.swp
