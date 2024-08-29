@@ -1,4 +1,4 @@
-MGP v 1.4.0 8/16/24
+MGP v 1.4.0 8/29/24
 -------------------
   *Added novel allele handling functionality. Novel alleles will prompt a window
   to appear, asking questions to help determine the nature of the mutation of
