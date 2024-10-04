@@ -1,5 +1,5 @@
 #external functions
-#v 1.4.0
+#v 1.5.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -498,6 +498,20 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
+    
+    #if DRB1*04:92 and DRB1*04:07 appear as mismatches for either/or donor and recipients, remove them from
+    #mismatched alleles for each category
+    #MM occurs due to lack of exon 1 sequencing in IMGT protein alignments (as of 3.57.0), but based on 
+    #NGS consensus sequences for both alleles, there are no differences in the exon 1 AA sequences
+    if(cat == 'DRB1'){
+      if(grepl('DRB1*04:92', d_mm_alleles, fixed = TRUE) & grepl('DRB1*04:07', r_mm_alleles, fixed = TRUE)){
+        d_mm_alleles<-d_mm_alleles[d_mm_alleles!='DRB1*04:92']
+        r_mm_alleles<-r_mm_alleles[r_mm_alleles!='DRB1*04:07']
+      } else if(grepl('DRB1*04:07', d_mm_alleles, fixed = TRUE) & grepl('DRB1*04:92', r_mm_alleles, fixed = TRUE)){
+        d_mm_alleles<-d_mm_alleles[d_mm_alleles!='DRB1*04:07']
+        r_mm_alleles<-r_mm_alleles[r_mm_alleles!='DRB1*04:92']
+      }
+    }
     
     ##GvH calculation
     for(i in r_mm_alleles){

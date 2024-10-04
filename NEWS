@@ -1,3 +1,9 @@
+MGP v 1.5.0 10/4/24
+-------------------
+* Added exception to remove DRB1*04:92 and DRB1*04:07 from mismatched alleles if both alleles are 
+  present in donor mismatched alleles and recipient mismatched alleles
+* Updated NMDP refrence file
+
 MGP v 1.4.0 8/29/24
 -------------------
   *Added novel allele handling functionality. Novel alleles will prompt a window
