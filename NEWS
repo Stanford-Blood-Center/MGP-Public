@@ -1,8 +1,18 @@
+MGP v 1.6.0 10/9/24
+-------------------
+* Code refactoring for NMDP code translation
+* Modified NMDP logic for recipient alleles - if mismatched recip allele
+ is found in NMDP code, remove corresponding NMDP allele from the mismatched donor
+ allele
+* Added exception logic for DRB1*04:92/DRB1*04:07 for NMDP alleles 
+* Bug fixes
+* Updated NMDP reference file
+
 MGP v 1.5.0 10/4/24
 -------------------
 * Added exception to remove DRB1*04:92 and DRB1*04:07 from mismatched alleles if both alleles are 
   present in donor mismatched alleles and recipient mismatched alleles
-* Updated NMDP refrence file
+* Updated NMDP reference file
 
 MGP v 1.4.0 8/29/24
 -------------------
