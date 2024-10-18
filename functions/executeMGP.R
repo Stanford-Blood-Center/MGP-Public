@@ -1,4 +1,4 @@
-#v 1.4.0
+#v 1.7.0
 
 library(shiny)
 
@@ -22,7 +22,7 @@ executeMGPServer<-function(id, creds, patient, donor, log, hlaRecipient, hlaReci
       #browser()
        ns <- session$ns
        
-       mgp<-reactiveValues(result=NULL, mgDBTable=NULL, mgpTable=NULL)
+       mgp<-reactiveValues(result=NULL, mgDBTable=NULL, mgpTable=NULL, missing_seq=NULL)
        final<-reactiveValues(log_path=NULL, result=NULL, df=NULL, mgpTable=NULL, mgDBTable=NULL)
         
                                                 ##### OUTPUT DIFFERENCES #####
@@ -48,9 +48,13 @@ executeMGPServer<-function(id, creds, patient, donor, log, hlaRecipient, hlaReci
         
         mgp$result<-run_res[[1]]
         final$log_path<-run_res[[2]]
+        mgp$missing_seq<-run_res[[4]]
         
         if(mgp$result){
           message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
+          if(!is.null(mgp$missing_seq)){
+            showModal(missingModal(mgp$missing_seq))
+          }
           lgr$info(message)
           lgr$info('**********MATCH GRADE EVALUATION END**********')
           hide_spinner()
@@ -94,6 +98,7 @@ executeMGPServer<-function(id, creds, patient, donor, log, hlaRecipient, hlaReci
           mgp$result<-run_res[[1]]
           final$log_path<-run_res[[2]]
           df<-run_res[[3]]
+          mgp$missing_seq<-run_res[[4]]
           
           if(mgp$result){
             mgp$mgpTable<-df %>%
@@ -104,6 +109,11 @@ executeMGPServer<-function(id, creds, patient, donor, log, hlaRecipient, hlaReci
               relocate(Seven_loci_alleles, .before= seven_loci_match)
             
             hide_spinner()
+
+            if(!is.null(mgp$missing_seq)){
+              showModal(missingModal(mgp$missing_seq))
+            }
+            
             tagList(
               hr(),
               h3('MGP Results', style = "text-align: center; font-weight: bold;"),

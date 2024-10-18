@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.6.0</b></i></h6>
+    <h6><i><b>Version 1.7.0</b></i></h6>
     <br>
 
     <div class='instruction'>
@@ -45,7 +45,12 @@ getInstructions<-function(){
     </div>
     
     <div class='instruction'>
-        <b>4a)</b> If the recipient and/or donor has novel alleles, a window with some questions will appear for each novel allele. The window title will indicate
+        <b>4a)</b> A pop-up window will appear at the end of the job if the recipient and/or donor has an allele that does not have a complete sequence for the ARD in the IMGT protein alignments. 
+        Double check counts for the categories that the loci of the alleles appear in. Click 'OK' to exit.
+    </div>
+    
+    <div class='instruction'>
+        <b>4b)</b> If the recipient and/or donor has novel alleles, a window with some questions will appear for each novel allele. The window title will indicate
         which novel allele is being referenced. The first question is what position the mutation in the novel allele is at. Click 'Submit' after inputting
         the position. If the position is in the antigen recognition domain, a second question asking if the mutation is synonymous or non-synonymous will appear. A 'Next' button
         will be present if there are multiple novel alleles. A 'Finish' button will be present for the final novel allele. 

@@ -1,4 +1,4 @@
-#v 1.4.0
+#v 1.7.0
 
 options(warn = 2) 
 
@@ -219,9 +219,16 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
         d_mg$DSA<-DSA
       }
       
+      missing_alleles<-paste(c(ABC[[3]], DRB1[[3]], DRB345[[3]], DQ[[3]], DP[[3]]), collapse = ', ')
+      final_missing_message<-NULL
+      
+      if(missing_alleles != ""){
+        final_missing_message<-paste('The following alleles do not have a complete sequence in the IMGT reference alignment for the ARD: <b>', missing_alleles, '</b>. Mismatches may be incorrect. Please check counts.', sep = '')
+      }
+
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
-    
-      return(list('TRUE', log, d_mg[c(36:49)]))
+      
+      return(list('TRUE', log, d_mg[c(36:49)], final_missing_message))
       
     },
     error = function(e){
