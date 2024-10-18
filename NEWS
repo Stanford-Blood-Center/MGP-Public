@@ -1,3 +1,10 @@
+MGP v 1.7.0 10/17/24
+-------------------
+* Added a pop-up window at the end of a run if the donor and/or recipient has an
+  allele that does not have a complete sequence for the ARD in the IMGT reference alignment
+* Updated IMGT protein alignmments to version 3.58.0 
+* Updated NMDP reference file
+
 MGP v 1.6.0 10/9/24
 -------------------
 * Code refactoring for NMDP code translation

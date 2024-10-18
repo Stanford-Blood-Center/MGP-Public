@@ -1,5 +1,5 @@
 #external functions
-#v 1.6.0
+#v 1.7.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -31,7 +31,7 @@ getMatchGrade<-function(con, r_itl){
 
 #load NMDP file downloaded from https://hml.nmdp.org/MacUI/
 #in the future, find a way to automate downloading new releases of the NMDP file 
-#and updating the version in /ref
+#and updating the version in /ref 
 loadNMDP<-function(){
   
   nmdp_file<-readRDS(list.files('ref', pattern = 'nmdp', full.names = T))
@@ -140,7 +140,7 @@ getTyping<-function(con, mgDF, type){
   novelAllelesAll<-c()
   
   for(j in colnames(t_df)){
-
+    
     if(any(grepl('@', t_df[,j]))){
       if(j == 'DRB'){
         delimit <- ''
@@ -197,8 +197,8 @@ getTyping<-function(con, mgDF, type){
         #homozygous. replace the second allele with the first one for recipient
         if(s_pg_alleles){
           if(type == 'r'){
-          lgr$info(paste(align_locus, 'has 2 alleles with the same P-group. Replacing', t_df[2,j], 'with', t_df[1,j]))
-          t_df[2,j]<-t_df[1,j]
+            lgr$info(paste(align_locus, 'has 2 alleles with the same P-group. Replacing', t_df[2,j], 'with', t_df[1,j]))
+            t_df[2,j]<-t_df[1,j]
           }
         }
       }
@@ -346,7 +346,7 @@ getTCE<-function(d_hla, r_hla){
 #'DRP' - HLA-DRB3/4/5
 #'DR' - HLA-DRB1
 calcABCDRB<-function(cat, d_hla, r_hla, synqList){
-
+  
   residue<-90
   
   if(cat == 'ABC'){
@@ -381,7 +381,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category has not been sequenced in donor genotype
   #this could happen for DRB3/4/5 or HLA-C
   if(all(is.na(d_cat))){
-    return(list(c(0,0,0,0), NULL))
+    return(list(c(0,0,0,0), NULL, NULL))
   }
   
   #get loci that have not been sequenced
@@ -416,7 +416,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category for recipient only has NAs (i.e two non-expressed
   #alleles)
   if(all(is.na(r_cat))){
-    return(list(c(0,0,0,0), NULL))
+    return(list(c(0,0,0,0), NULL, NULL))
   }
   
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
@@ -427,7 +427,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   gvh<-hvg<-sapply(group, function(x) 0)
   
   if(all(d_alleles %in% r_alleles) & all(r_alleles %in% d_alleles)){
-    return(list(c(total, matches, 0, 0), NULL))
+    return(list(c(total, matches, 0, 0), NULL, NULL))
     
   } else{
     
@@ -498,7 +498,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
-
+    
     all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
     
@@ -510,19 +510,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
       }
     }
     
-    #if DRB1*04:92 and DRB1*04:07 appear as mismatches for either/or donor and recipients, remove them from
-    #mismatched alleles for each category
-    #MM occurs due to lack of exon 1 sequencing in IMGT protein alignments (as of 3.57.0), but based on 
-    #NGS consensus sequences for both alleles, there are no differences in the exon 1 AA sequences
-    if(cat == 'DRB1'){
-      if('DRB1*04:92' %in% d_mm_alleles & 'DRB1*04:07' %in% r_mm_alleles){
-        d_mm_alleles<-d_mm_alleles[d_mm_alleles!='DRB1*04:92']
-        r_mm_alleles<-r_mm_alleles[r_mm_alleles!='DRB1*04:07']
-      } else if('DRB1*04:07' %in% d_mm_alleles & 'DRB1*04:92' %in% r_mm_alleles){
-        d_mm_alleles<-d_mm_alleles[d_mm_alleles!='DRB1*04:07']
-        r_mm_alleles<-r_mm_alleles[r_mm_alleles!='DRB1*04:92']
-      }
-    }
+    missing_message<-c()
     
     ##GvH calculation
     for(i in r_mm_alleles){
@@ -566,7 +554,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
       if(length(nmdp_alleles)!=0){
         
         nmdp_flag<-!i %in% unlist(nmdp_translated[c(nmdp_alleles)])
-
+        
         #if mismatched recipient allele is in translated NMDP alleles, remove mismatched NMDP allele
         #from donor mismatched alleles
         if(!nmdp_flag){
@@ -598,25 +586,44 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
       if(length(reg_alleles)!=0){
         
         align<-alignments[[align_locus]]
+        
         r_gvh_prot<-align %>%
           filter(trimmed_allele == i) %>%
           slice(1) %>%
           select(as.character(seq(1, residue))) %>%
           paste(collapse = "")
         
+        if(grepl('*', r_gvh_prot, fixed = TRUE)){
+          missing_message<-append(paste('RECIPIENT-', i, sep = ''), missing_message)
+        }
+        
+        #exception for DRB1*04:92 and DRB1*04:07
+        if(cat == 'DRB1'){
+          if(i == 'DRB1*04:92'){
+            if('DRB1*04:07' %in% d_mm_alleles){
+              next 
+            }
+          } else if(i == 'DRB1*04:07'){
+            if('DRB1*04:92' %in% d_mm_alleles){
+              next
+            }
+          }
+        }
+        
         d_gvh_prot<-align %>%
           filter(trimmed_allele %in% c(d_locus_alleles)) %>%
           distinct(trimmed_allele, .keep_all = TRUE) %>%
-          select(as.character(seq(1, residue))) %>%
-          unite(., 'all', sep='') %>%
-          select('all')
+          select(c(trimmed_allele, as.character(seq(1, residue)))) %>%
+          unite(.,'all', -trimmed_allele, sep='')
         
-        reg_flag<-!any(r_gvh_prot == d_gvh_prot)
+        
+        reg_flag<-!any(r_gvh_prot == d_gvh_prot$all)
+        
       }
       
       if(reg_flag | nmdp_flag){
         #if donor alleles consist of 1 nmdp and 1 regular allele, assess
-        #if the recipient allele has FALSE for reg_flag or nmdp_flag move on to
+        #if the recipient allele has FALSE for reg_flag or nmdp_flag
         #move onto next iteration without adding to the counter bc there is a match
         if(length(reg_alleles)==1 & length(nmdp_alleles)==1){
           if(!reg_flag | !nmdp_flag){
@@ -660,7 +667,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
           next
         }
       }
-
+      
       if(grepl('[A-Z]', substr(gsub('.*?:', "", j), 1,1))){
         if(!any(nmdp_translated[[j]] %in% r_locus_alleles)){
           hvg_alleles<-append(hvg_alleles, j)
@@ -676,6 +683,21 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
           select(as.character(seq(1, residue))) %>%
           paste(collapse = "")
         
+        if(grepl('*', d_hvg_prot, fixed = TRUE)){
+          missing_message<-append(paste('DONOR-', j, sep = ''), missing_message)
+        }
+        
+        if(cat == 'DRB1'){
+          if(j == 'DRB1*04:92'){
+            if('DRB1*04:07' %in% r_mm_alleles){
+              next 
+            }
+          } else if(j == 'DRB1*04:07'){
+            if('DRB1*04:92' %in% r_mm_alleles){
+              next
+            }
+          }
+        }
         
         r_hvg_prot<-align %>%
           filter(trimmed_allele %in% c(r_locus_alleles)) %>%
@@ -690,7 +712,6 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
         }
       }
     }
-    
     
     gvh_total<-sum(gvh)
     hvg_total<-sum(hvg)
@@ -707,11 +728,10 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     
     matches<-total-mismatches
     
-    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles))
+    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, missing_message))
     
   }
 }
-
 
 #calculate matches for DQ and DP
 calcDQDP<-function(cat, d_hla, r_hla, synqList){
@@ -723,7 +743,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   
   #return 0 if selected category has not been sequenced in donor genotype
   if(all(is.na(d_cat))){
-    return(list(c(0,0,0,0), NULL))
+    return(list(c(0,0,0,0), NULL, NULL))
   }
   
   r_cat<-r_hla %>%
@@ -732,7 +752,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category for recipient only has NAs (i.e two non-expressed
   #alleles)
   if(all(is.na(r_cat))){
-    return(list(c(0,0,0,0), NULL))
+    return(list(c(0,0,0,0), NULL, NULL))
   }
   
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
@@ -747,7 +767,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   gvh<-hvg<-sapply(group, function(x) 0)
   
   if(all(d_alleles %in% r_alleles) & all(r_alleles %in% d_alleles)){
-    return(list(c(total, matches, 0, 0), NULL))
+    return(list(c(total, matches, 0, 0), NULL, NULL))
   } else{
     
     nmdp_flag<-reg_flag<-FALSE
@@ -817,7 +837,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
     
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
-  
+    
     
     all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
@@ -828,6 +848,8 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
         nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
       }
     }
+    
+    missing_message<-c()
     
     ##GvH calculation
     for(i in r_mm_alleles){
@@ -857,15 +879,18 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
           select(as.character(seq(1, 90))) %>%
           paste(collapse = "")
         
+        if(grepl('*', r_gvh_prot, fixed = TRUE)){
+          missing_message<-append(paste('RECIPIENT-', i, sep =''), missing_message)
+        }
+        
         d_gvh_prot<-align %>%
           filter(trimmed_allele %in% c(d_locus_alleles)) %>%
           distinct(trimmed_allele, .keep_all = TRUE) %>%
           select(as.character(seq(1, 90))) %>%
-          unite(., 'all', sep='') %>%
-          select('all')
+          unite(., 'all', sep='') 
         
-        reg_flag<-!any(r_gvh_prot == d_gvh_prot)
-        
+        reg_flag<-!any(r_gvh_prot == d_gvh_prot$all)
+  
       }
       
       if(reg_flag | nmdp_flag){
@@ -908,6 +933,9 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
           select(as.character(seq(1, 90))) %>%
           paste(collapse = "")
         
+        if(grepl('*', d_hvg_prot, fixed = TRUE)){
+          missing_message<-append(paste('DONOR-', j, sep =''), missing_message)
+        }
         
         r_hvg_prot<-align %>%
           filter(trimmed_allele %in% c(r_locus_alleles)) %>%
@@ -929,7 +957,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
     
     matches<-total-max(gvh_total, hvg_total)
     
-    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles))
+    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, missing_message))
   }
 }
 
@@ -1164,4 +1192,12 @@ determinePosition<-function(position, locus){
 #generate module ID
 generateID<-function(count){
   module_id<-paste0("module_", count)
+}
+
+#pop up modal for missing sequences
+missingModal<-function(message){
+  modalDialog(
+    HTML(message),
+    footer = modalButton('OK!')
+  )
 }
