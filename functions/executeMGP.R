@@ -208,10 +208,13 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
           req(mgp$result)
 
           if(mgp$result == 'TRUE'){
+            mm_mess<-paste0(mgp$A_mm, mgp$B_mm, mgp$C_mm, mgp$DRB1_mm, mgp$DRB345_mm, mgp$DQA1_mm, mgp$DQB1_mm, mgp$DPA1_mm, mgp$DPB1_mm)
+            if(length(mm_mess)==0){
+              mm_mess<-'<h4 style="font-weight:bold; text-align:center;">None</h4>'
+            }
             tagList(
               h3('Mismatches', style = 'font-weight:bold; text-align:center; margin-top: 1px;'),
-              HTML(paste0(mgp$A_mm, mgp$B_mm, mgp$C_mm, mgp$DRB1_mm, mgp$DRB345_mm, mgp$DQA1_mm, mgp$DQB1_mm, mgp$DPA1_mm, mgp$DPB1_mm)
-              ))
+              HTML(mm_mess))
           } else{
             NULL
           }
