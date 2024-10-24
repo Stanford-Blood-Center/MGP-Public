@@ -1,5 +1,5 @@
 #external functions
-#v 1.7.0
+#v 1.8.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -53,7 +53,6 @@ getDonors<-function(mg_df){
 #transform loci columns into rows, populate homozygous alleles
 getTyping<-function(con, mgDF, type){
   
-  #version 3.57.0 as of 7/19/24 (v 1.3.0)
   alignments<<-readRDS('ref/alignments.rda')
   
   hla_cols <- sort(do.call(paste, c(expand.grid(c('a', 'b', 'c', 'dr', 'drp', 'dqa', 'dqb', 'dpa', 'dpb'), c(1,2)), sep = '_')))
@@ -138,20 +137,20 @@ getTyping<-function(con, mgDF, type){
   #skip NMDP, NAs, and novel alleles (denoted by @ suffix)
   residue<-NULL
   novelAllelesAll<-c()
-  
+
   for(j in colnames(t_df)){
+    
+    if(type == 'r'){
+      prefix <- 'Recipient'
+    } else{
+      prefix <- 'Donor'
+    }
     
     if(any(grepl('@', t_df[,j]))){
       if(j == 'DRB'){
         delimit <- ''
       } else{
         delimit <- '*'
-      }
-      
-      if(type == 'r'){
-        prefix = 'Recipient'
-      } else{
-        prefix = 'Donor'
       }
       
       novelAlleles<-paste('HLA-', j, delimit, t_df[,j][grepl('@', t_df[,j])], sep = '')
@@ -194,16 +193,16 @@ getTyping<-function(con, mgDF, type){
           pull()
         
         #if two alleles in the same locus have the same P group, it is effectively
-        #homozygous. replace the second allele with the first one for recipient
+        #homozygous. paste the first allele with the second allele and replace the second allele;
+        #phenotype will be cleaned up later
         if(s_pg_alleles){
-          if(type == 'r'){
-            lgr$info(paste(align_locus, 'has 2 alleles with the same P-group. Replacing', t_df[2,j], 'with', t_df[1,j]))
-            t_df[2,j]<-t_df[1,j]
-          }
+          lgr$info(paste(prefix, ' - ', align_locus, '*', t_df[2,j], ' and ', align_locus, '*', t_df[1,j], ' have the same P-group', sep = ''))
+          t_df[2,j]<-paste(t_df[1,j], t_df[2,j], sep = ',')
         }
       }
     }
   }
+  
   t_df<-t_df %>%
     rowwise() %>%
     mutate(across(everything(), ~ifelse(!is.na(.), ifelse(cur_column()=="DRB", paste(cur_column(), ., sep = ""), paste(cur_column(), ., sep = "*")), .)))
@@ -296,13 +295,17 @@ updateMGtable<-function(connection, type, vals){
 
 #get TCE permissibility for TCE
 getTCE<-function(d_hla, r_hla){
-  
   d_dpb<-d_hla %>%
     select(DPB1) %>%
     pull() %>%
     strsplit('\\*') %>%
     map(2) %>%
     unlist()
+  
+  #same p group formatting
+  if(any(grepl(',', d_dpb))){
+    d_dpb[[2]]<-strsplit(d_dpb[grepl(',', d_dpb)], ',')[[1]][[2]]
+  }
   
   if(all(is.na(d_dpb))){
     lgr$info('Donor has no DPB1 alleles to assess')
@@ -315,6 +318,11 @@ getTCE<-function(d_hla, r_hla){
     strsplit('\\*') %>%
     map(2) %>%
     unlist()
+  
+  if(any(grepl(',', r_dpb))){
+    r_dpb[[2]]<-strsplit(r_dpb[grepl(',', r_dpb)], ',')[[1]][[2]]
+  }
+  
   
   legend<-list('Non-Permissive'='N', 'Permissive'='P','Unknown'='U')
   
@@ -381,7 +389,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category has not been sequenced in donor genotype
   #this could happen for DRB3/4/5 or HLA-C
   if(all(is.na(d_cat))){
-    return(list(c(0,0,0,0), NULL, NULL))
+    return(list(c(0,0,0,0), NULL, NULL, NULL))
   }
   
   #get loci that have not been sequenced
@@ -416,18 +424,36 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category for recipient only has NAs (i.e two non-expressed
   #alleles)
   if(all(is.na(r_cat))){
-    return(list(c(0,0,0,0), NULL, NULL))
+    return(list(c(0,0,0,0), NULL, NULL, NULL))
   }
   
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
   r_alleles<-na.omit(unlist(r_cat, use.names=F))
+  
+  # for same p group processing; parse phenotype to make homozygous. keep the
+  # other same p group allele to filter out from list of mismatched alleles,
+  # but keep in overall alleles for NMDP comparison
+  r_same_p_group<-c()
+  d_same_p_group<-c()
+  
+  if(any(grepl(',', r_alleles))){
+    r_p_group<-processPGroups(r_alleles)
+    r_alleles<-r_p_group[[1]]
+    r_same_p_group<-r_p_group[[2]]
+  }
+  
+  if(any(grepl(',', d_alleles))){
+    d_p_group<-processPGroups(d_alleles)
+    d_alleles<-d_p_group[[1]]
+    d_same_p_group<-d_p_group[[2]]
+  }
   
   total<-matches<-length(d_alleles)
   
   gvh<-hvg<-sapply(group, function(x) 0)
   
   if(all(d_alleles %in% r_alleles) & all(r_alleles %in% d_alleles)){
-    return(list(c(total, matches, 0, 0), NULL, NULL))
+    return(list(c(total, matches, 0, 0), NULL, NULL, NULL))
     
   } else{
     
@@ -435,69 +461,24 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     
     #novel allele handling - recipient
     if(any(grepl('@', r_alleles))){
-      
-      recip_novel_alleles<-r_alleles[grepl('@', r_alleles)]
-      
-      for(i in recip_novel_alleles){
-        
-        
-        novelFull<-paste('HLA-', i, sep ='')
-        
-        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
-        #move onto the next novel allele and remove @ sign
-        
-        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), keep @ sign
-        
-        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
-        #move onto the next allele and remove @ sign from novel allele
-        if(novelFull %in% names(synqList)){
-          if(synqList[[novelFull]] == 'y'){
-            r_alleles[r_alleles == i]<-gsub('@', '', i)
-            next
-          } else{
-            next
-          }
-        } else{
-          r_alleles[r_alleles == i]<-gsub('@', '', i)
-          next
-        }
-      }
+      r_alleles<-processNovelAlleles(r_alleles, synqList)
     }
     
     #novel allele handling - donor
     if(any(grepl('@', d_alleles))){
-      
-      donor_novel_alleles<-d_alleles[grepl('@', d_alleles)]
-      
-      for(i in donor_novel_alleles){
-        
-        novelFull<-paste('HLA-', i, sep ='')
-        
-        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
-        #move onto the next novel allele 
-        
-        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), count as MM
-        #for hvg
-        
-        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
-        #move onto the next allele
-        if(novelFull %in% names(synqList)){
-          
-          if(synqList[[novelFull]] == 'y'){
-            d_alleles[d_alleles == i]<-gsub('@', '', i)
-            next
-          } else{
-            next
-          }
-        } else{
-          d_alleles[d_alleles == i]<-gsub('@', '', i)
-          next
-        }
-      }
+      d_alleles<-processNovelAlleles(d_alleles, synqList)
     }
     
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
+    
+    if(length(r_same_p_group)!=0){
+      r_mm_alleles<-setdiff(r_mm_alleles, r_same_p_group)
+    }
+    
+    if(length(d_same_p_group)!=0){
+      d_mm_alleles<-setdiff(d_mm_alleles, d_same_p_group)
+    }
     
     all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
@@ -511,6 +492,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     }
     
     missing_message<-c()
+    gvh_alleles<-sapply(group, function(x) c())
     
     ##GvH calculation
     for(i in r_mm_alleles){
@@ -528,19 +510,21 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
         mm_locus<-'DRB'
       }
       
-      d_locus_alleles<-d_cat %>%
-        select(all_of(mm_locus)) %>%
-        pull()
+      d_locus_alleles<-d_alleles[grepl(mm_locus, d_alleles, fixed=TRUE)]
       
       if(align_locus %in% c('DRB3', 'DRB4', 'DRB5')){
         #if DRB locus for recipient mismatch allele is not present in donor locus
         #alleles, add 1 to GvH and move onto next iteration
         if(all(align_locus != gsub('^(.*?)\\*.*$', '\\1', d_locus_alleles)) & !all(d_locus_alleles == '')){
+          gvh_alleles[[mm_locus]]<-append(gvh_alleles[[mm_locus]], i)
           gvh[[mm_locus]]<-gvh[[mm_locus]]+1
+          lgr$info(paste('GvH MM-', i, sep = ''))
           next
         }
         if(all(d_locus_alleles == '')){
+          gvh_alleles[[mm_locus]]<-append(gvh_alleles[[mm_locus]], i)
           gvh[[mm_locus]]<-length(r_mm_alleles)
+          lgr$info(paste('GvH MM-', i, sep = ''))
           next
         }
       } 
@@ -553,12 +537,12 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
       
       if(length(nmdp_alleles)!=0){
         
-        nmdp_flag<-!i %in% unlist(nmdp_translated[c(nmdp_alleles)])
+        nmdp_flag<-!i%in% unlist(nmdp_translated[c(nmdp_alleles)])
         
         #if mismatched recipient allele is in translated NMDP alleles, remove mismatched NMDP allele
         #from donor mismatched alleles
         if(!nmdp_flag){
-          d_mm_alleles<-d_mm_alleles[!d_mm_alleles %in% names(nmdp_translated)[map(nmdp_translated, ~i %in% .)==TRUE]]
+          d_mm_alleles<-d_mm_alleles[!d_mm_alleles %in% names(nmdp_translated)[map(nmdp_translated, ~i%in% .)==TRUE]]
         }
         
         #assess for DRB1*04:07/DRB1*04:92 exception for NMDP codes
@@ -568,12 +552,12 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
         #if yes, change nmdp_flag = FALSE and remove the NMDP allele
         #from the donor mismatched alleles w that code
         if(cat=='DRB1'){
-          if(i == 'DRB1*04:07'){
+          if(i== 'DRB1*04:07'){
             if('DRB1*04:92' %in% unlist(nmdp_translated)){
               nmdp_flag<-FALSE
               d_mm_alleles<-d_mm_alleles[d_mm_alleles!=names(nmdp_translated)[map(nmdp_translated, ~'DRB1*04:92' %in% .)==TRUE]]
             }
-            if(i == 'DRB1*04:92'){
+            if(i== 'DRB1*04:92'){
               if('DRB1*04:07' %in% unlist(nmdp_translated)){
                 nmdp_flag<-FALSE
                 d_mm_alleles<-d_mm_alleles[d_mm_alleles!=names(nmdp_translated)[map(nmdp_translated, ~'DRB1*04:07' %in% .)==TRUE]]
@@ -599,11 +583,11 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
         
         #exception for DRB1*04:92 and DRB1*04:07
         if(cat == 'DRB1'){
-          if(i == 'DRB1*04:92'){
+          if(i== 'DRB1*04:92'){
             if('DRB1*04:07' %in% d_mm_alleles){
               next 
             }
-          } else if(i == 'DRB1*04:07'){
+          } else if(i== 'DRB1*04:07'){
             if('DRB1*04:92' %in% d_mm_alleles){
               next
             }
@@ -616,9 +600,16 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
           select(c(trimmed_allele, as.character(seq(1, residue)))) %>%
           unite(.,'all', -trimmed_allele, sep='')
         
-        
         reg_flag<-!any(r_gvh_prot == d_gvh_prot$all)
         
+        #if the recipient mature protein sequence is equivalent to one of the 
+        #sequences for the mismatched donor allele, remove it from the list of
+        #mismatched donor alleles to evaluate
+        if(!reg_flag){
+          filter<-d_gvh_prot$trimmed_allele[r_gvh_prot == d_gvh_prot$all]
+          lgr$info(paste(i, ' and ', filter, ' have the same P-group', sep = ''))
+          d_mm_alleles<-d_mm_alleles[d_mm_alleles != filter]
+        }
       }
       
       if(reg_flag | nmdp_flag){
@@ -630,11 +621,13 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
             next 
           }
         }
+        gvh_alleles[[mm_locus]]<-append(gvh_alleles[[mm_locus]], i)
         gvh[[mm_locus]]<-gvh[[mm_locus]]+1
+        lgr$info(paste('GvH MM-', i, sep = ''))
       }
     }
     
-    hvg_alleles<-NULL
+    hvg_alleles<-sapply(group, function(x) c())
     
     #HvG calculations
     for(j in d_mm_alleles){
@@ -651,27 +644,28 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
         mm_locus<-'DRB'
       }
       
-      r_locus_alleles<-r_cat %>%
-        select(all_of(mm_locus)) %>%
-        pull()
+      r_locus_alleles<-r_alleles[grepl(mm_locus, r_alleles, fixed=TRUE)]
       
       if(align_locus %in% c('DRB3', 'DRB4', 'DRB5')){
         if(all(r_locus_alleles == '')){
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)          
           hvg[[mm_locus]]<-length(d_mm_alleles)
+          lgr$info(paste('HvG MM-', j, sep = ''))
           next
         }
         if(all(align_locus != gsub('^(.*?)\\*.*$', '\\1', r_locus_alleles)) & !all(r_locus_alleles == '')){
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
+          lgr$info(paste('HvG MM-', j, sep = ''))
           next
         }
       }
       
       if(grepl('[A-Z]', substr(gsub('.*?:', "", j), 1,1))){
         if(!any(nmdp_translated[[j]] %in% r_locus_alleles)){
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
+          lgr$info(paste('HvG MM-', j, sep = ''))
         }
       } else{
         
@@ -707,8 +701,9 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
           select('all')
         
         if(!any(d_hvg_prot == r_hvg_prot)){
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
+          lgr$info(paste('HVG MM-', j, sep = ''))
         }
       }
     }
@@ -721,14 +716,12 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     #get the greater of the two mismatches for each locus and count # of mismatches
     #to subtract from the total
     for(a in 1:length(gvh)){
-      
       mismatches<-mismatches+max(gvh[[a]], hvg[[a]])
-      
     }
     
     matches<-total-mismatches
     
-    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, missing_message))
+    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, gvh_alleles, missing_message))
     
   }
 }
@@ -743,7 +736,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   
   #return 0 if selected category has not been sequenced in donor genotype
   if(all(is.na(d_cat))){
-    return(list(c(0,0,0,0), NULL, NULL))
+    return(list(c(0,0,0,0), NULL, NULL, NULL))
   }
   
   r_cat<-r_hla %>%
@@ -752,11 +745,29 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   #return 0 if selected category for recipient only has NAs (i.e two non-expressed
   #alleles)
   if(all(is.na(r_cat))){
-    return(list(c(0,0,0,0), NULL, NULL))
+    return(list(c(0,0,0,0), NULL, NULL, NULL))
   }
   
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
   r_alleles<-na.omit(unlist(r_cat, use.names=F))
+  
+  # for same p group processing; parse phenotype to make homozygous. keep the
+  # other same p group allele to filter out from list of mismatched alleles,
+  # but keep in overall alleles for NMDP comparison
+  r_same_p_group<-c()
+  d_same_p_group<-c()
+  
+  if(any(grepl(',', r_alleles))){
+    r_p_group<-processPGroups(r_alleles)
+    r_alleles<-r_p_group[[1]]
+    r_same_p_group<-r_p_group[[2]]
+  }
+  
+  if(any(grepl(',', d_alleles))){
+    d_p_group<-processPGroups(d_alleles)
+    d_alleles<-d_p_group[[1]]
+    d_same_p_group<-d_p_group[[2]]
+  }
   
   total<-matches<-length(d_cat[!is.na(d_cat)])
   
@@ -767,77 +778,32 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
   gvh<-hvg<-sapply(group, function(x) 0)
   
   if(all(d_alleles %in% r_alleles) & all(r_alleles %in% d_alleles)){
-    return(list(c(total, matches, 0, 0), NULL, NULL))
+    return(list(c(total, matches, 0, 0), NULL, NULL, NULL))
   } else{
     
     nmdp_flag<-reg_flag<-FALSE
     
     #novel allele handling - recipient
     if(any(grepl('@', r_alleles))){
-      
-      recip_novel_alleles<-r_alleles[grepl('@', r_alleles)]
-      
-      for(i in recip_novel_alleles){
-        
-        
-        novelFull<-paste('HLA-', i, sep ='')
-        
-        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
-        #move onto the next novel allele and remove @ sign
-        
-        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), keep @ sign
-        
-        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
-        #move onto the next allele and remove @ sign from novel allele
-        if(novelFull %in% names(synqList)){
-          if(synqList[[novelFull]] == 'y'){
-            r_alleles[r_alleles == i]<-gsub('@', '', i)
-            next
-          } else{
-            next
-          }
-        } else{
-          r_alleles[r_alleles == i]<-gsub('@', '', i)
-          next
-        }
-      }
+      r_alleles<-processNovelAlleles(r_alleles, synqList)
     }
     
     #novel allele handling - donor
     if(any(grepl('@', d_alleles))){
-      
-      donor_novel_alleles<-d_alleles[grepl('@', d_alleles)]
-      #browser()
-      for(i in donor_novel_alleles){
-        
-        novelFull<-paste('HLA-', i, sep ='')
-        
-        #if the mutation is in the ARD and is SYNONYMOUS ('y'),
-        #move onto the next novel allele 
-        
-        #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), count as MM
-        #for hvg
-        
-        #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
-        #move onto the next allele
-        if(novelFull %in% names(synqList)){
-          
-          if(synqList[[novelFull]] == 'y'){
-            d_alleles[d_alleles == i]<-gsub('@', '', i)
-            next
-          } else{
-            next
-          }
-        } else{
-          d_alleles[d_alleles == i]<-gsub('@', '', i)
-          next
-        }
-      }
+      d_alleles<-processNovelAlleles(d_alleles, synqList)
     }
     
     d_mm_alleles<-unique(d_alleles[which(!d_alleles %in% r_alleles)])
     r_mm_alleles<-unique(r_alleles[which(!r_alleles %in% d_alleles)])
     
+    #remove other same p group allele so phenotype appears to be homozygous
+    if(length(r_same_p_group)!=0){
+      r_mm_alleles<-setdiff(r_mm_alleles, r_same_p_group)
+    }
+    
+    if(length(d_same_p_group)!=0){
+      d_mm_alleles<-setdiff(d_mm_alleles, d_same_p_group)
+    }
     
     all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
@@ -850,23 +816,20 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
     }
     
     missing_message<-c()
+    gvh_alleles<-sapply(group, function(x) c())
     
     ##GvH calculation
     for(i in r_mm_alleles){
-      
+    
       mm_locus<-gsub('^(.*?)\\*.*$', '\\1', i)
       
-      d_locus_alleles<-d_cat %>%
-        select(all_of(mm_locus)) %>%
-        pull()
+      d_locus_alleles<-d_alleles[grepl(mm_locus, d_alleles, fixed=TRUE)]
       
       nmdp_alleles<-names(nmdp_translated)[grepl(mm_locus, names(nmdp_translated))]
       reg_alleles<-setdiff(d_locus_alleles, nmdp_alleles)
       
       if(length(nmdp_alleles)!=0){
-        
         nmdp_flag<-!i %in% unlist(nmdp_translated[c(nmdp_alleles)])
-        
       }
       
       if(length(reg_alleles)!=0){
@@ -890,7 +853,12 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
           unite(., 'all', sep='') 
         
         reg_flag<-!any(r_gvh_prot == d_gvh_prot$all)
-  
+        
+        if(!reg_flag){
+          filter<-d_gvh_prot$trimmed_allele[r_gvh_prot == d_gvh_prot$all]
+          lgr$info(paste(i, ' and ', filter, ' have the same P-group', sep = ''))
+          d_mm_alleles<-d_mm_alleles[d_mm_alleles != filter]
+        }
       }
       
       if(reg_flag | nmdp_flag){
@@ -902,25 +870,26 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
             next 
           }
         }
+        gvh_alleles[[mm_locus]]<-append(gvh_alleles[[mm_locus]], i)
         gvh[[mm_locus]]<-gvh[[mm_locus]]+1
+        lgr$info(paste('GvH MM-', i, sep = ''))
+        
       }
     }
     
-    hvg_alleles<-NULL
+    hvg_alleles<-sapply(group, function(x) c())
     
     for(j in d_mm_alleles){
       
       mm_locus<-gsub('^(.*?)\\*.*$', '\\1', j)
       
-      r_locus_alleles<-r_cat %>%
-        select(all_of(mm_locus)) %>%
-        pull()
-      
+      r_locus_alleles <- r_alleles[grepl(mm_locus, r_alleles, fixed=TRUE)]
+
       if(grepl('[A-Z]', substr(gsub('.*?:', "", j), 1,1))){
-        
         if(!any(nmdp_translated[[j]] %in% r_locus_alleles)){
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
+          lgr$info(paste('HvG MM-', j, sep = ''))
         }
         
       } else{
@@ -945,9 +914,9 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
           select('all')
         
         if(!any(d_hvg_prot == r_hvg_prot)){
-          
-          hvg_alleles<-append(hvg_alleles, j)
+          hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
+          lgr$info(paste('HvG MM-', j, sep = ''))
         }
       }
     }
@@ -957,7 +926,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
     
     matches<-total-max(gvh_total, hvg_total)
     
-    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, missing_message))
+    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, gvh_alleles, missing_message))
   }
 }
 
@@ -1123,19 +1092,43 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
           select(Serotype) %>%
           pull()
         
-        if(length(surrogate)!=0){
-          #if ':' is present in surrogate, filter by allele column
-          if(grepl(':', surrogate)){
-            allele_mfi<-mfi_vals %>%
-              filter(allele==surrogate)
+        if(locus == 'DPB1'){
+          surrogate<-sero_table %>%
+            filter(Allele == t) %>%
+            select(Serotype) %>%
+            pull() 
+          
+          if(length(surrogate)!=0){
+            #if ':' is present in surrogate, filter by allele column
+            if(grepl(':', surrogate)){
+              allele_mfi<-mfi_vals %>%
+                filter(allele==surrogate)
+            } else{
+              #else filter by antigen group
+              allele_mfi<-mfi_vals %>%
+                filter(antigen==surrogate)
+            }
           } else{
-            #else filter by antigen group
-            allele_mfi<-mfi_vals %>%
-              filter(antigen==surrogate)
+            lgr$info(sprintf('No surrogate found for %s', t))
+            next
           }
         } else{
-          lgr$info(sprintf('No surrogate found for %s', t))
-          next
+          #DQA1, DPA1
+          surrogate<-sero_table %>% 
+            filter(Serotype == surrogate) %>%
+            mutate(Allele = gsub('*', '\\*', Allele, fixed = TRUE)) %>%
+            pull(Allele)
+          
+          if(length(surrogate)!=0){
+            surrogate<-paste(surrogate, collapse = '|')
+            
+            #get serologically equivalent alpha alleles in beads
+            allele_mfi<-mfi_vals %>%
+              filter(grepl(surrogate, allele))
+          } else{
+            lgr$info(sprintf('No surrogate found for %s', t))
+            next
+          }
         }
       }
     }
@@ -1187,6 +1180,80 @@ determinePosition<-function(position, locus){
       return(FALSE)
     }
   }
+}
+
+#process novel alleles
+processNovelAlleles<-function(novelAlleles, synqList){
+    
+  novel_handle<-novelAlleles[grepl('@', novelAlleles)]
+  
+  for(i in novel_handle){
+    
+    novelFull<-paste('HLA-', i, sep ='')
+    
+    #if the mutation is in the ARD and is SYNONYMOUS ('y'),
+    #move onto the next novel allele and remove @ sign
+    
+    #if the mutation is in the ARD and is NON-SYNONYMOUS ('n'), keep @ sign
+    
+    #if the mutation is not in the ARD (i.e. it's not in the syn-nonsyn list), 
+    #move onto the next allele and remove @ sign from novel allele
+    if(novelFull %in% names(synqList)){
+      if(synqList[[novelFull]] == 'y'){
+        novelAlleles[novelAlleles == i]<-gsub('@', '', i)
+        next
+      } else{
+        next
+      }
+    } else{
+      novelAlleles[novelAlleles == i]<-gsub('@', '', i)
+      next
+    }
+  }
+  return(novelAlleles)
+}
+
+#process phenotypes with the same P group
+processPGroups<-function(alleles){
+  
+  same_p_group<-c()
+  pAlleles<-alleles[grepl(',', alleles)]
+  
+  for(i in 1:length(pAlleles)){
+    split<-strsplit(pAlleles[[i]], ',')[[1]]
+    allele1<-split[[1]]
+    allele2<-split[[2]]
+    fullAllele2<-paste(gsub('^(.*?)\\*.*$', '\\1', allele1), allele2, sep = '*')
+    
+    alleles<-append(fullAllele2, alleles)
+    alleles[alleles==pAlleles[[i]]]<-allele1
+    alleles<-unique(alleles)
+    same_p_group<-append(fullAllele2, same_p_group)
+  }
+  
+  return(list(alleles, same_p_group))
+}
+
+mismatchFormatter<-function(locus, gvh_alleles, hvg_alleles){
+  
+  gvh_alleles<-paste(gvh_alleles, collapse = ', ')
+  
+  if(gvh_alleles == ''){
+    gvh_alleles<-'None'
+  } 
+  
+  hvg_alleles<-paste(hvg_alleles, collapse = ', ')
+  
+  if(hvg_alleles == ''){
+    hvg_alleles<-'None'
+  } 
+  
+  return(paste(
+    '<h3 style="font-weight: bold;"><span style="background-color: yellow;">', locus, '</span></h3>',
+    '<b><u>GvH</b></u>: ', gvh_alleles, '<br>',
+    '<b><u>HvG</b></u>: ', hvg_alleles,
+    sep = ''
+  ))
 }
 
 #generate module ID

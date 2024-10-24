@@ -1,24 +1,10 @@
-#v 1.7.0
+#v 1.8.0
 
 options(warn = 2) 
 
 suppressPackageStartupMessages(library(lgr))
 
-calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_null_allele, donor_hla, synnonsynList, d_mg){
-
-  #set up log file
-  log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", r_itl, '_', sep=""), fileext = ".log")
-  lgr$add_appender(AppenderFile$new(log), name = "mg_log")
-  
-  lgr$info(paste('Executed by mTilda user: ', username, sep = ''))
-  sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
-  lgr$info(paste('SUNetID: ', sunetID, sep = ''))
-  
-  if(credentials == '30'){
-    lgr$info('***** CALCULATION MODE *****')
-  } else if(credentials %in% c('50', '60')){
-    lgr$info('***** REVIEW MODE *****')
-  }
+calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele, donor_hla, synnonsynList, d_mg){
   
   tryCatch(
     {
@@ -29,8 +15,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       lgr$info(paste('Recipient ITL entered:', r_itl))
       
       con<-dbConn()
-      lgr$info('Successfully connected to the database')
-      
+
       #get Antigen table from DB
       antigen_ref<<-getAntigenTable(con)
       
@@ -126,7 +111,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       
       ABCDRB1<-ABC[[1]]+DRB1[[1]]
       
-      print(ABCDRB1)
+      #print(ABCDRB1)
       
       #DRB3/4/5-DQ-DP
       #match, total, mm gvh, mm hvg
@@ -137,7 +122,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
         DRB345DQDP<-DRB345[[1]]+DQ[[1]]+DP[[1]]
       }
       
-      print(DRB345DQDP)
+      #print(DRB345DQDP)
       
       #7 LOCI TOTAL
       #match, total
@@ -155,7 +140,7 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       #disable this for real values while testing
       if(credentials == '30'){
         lgr$info('Updating match values in Match Grade')
-        updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d_itl))
+        #updateMGtable(con, 'match', c(ABCDRDQ[c(1,2)], ABCDRB1, DRB345DQDP, allLoci, d_itl))
         lgr$info('Match values successfully updated!')
       } else if(credentials %in% c('50', '60')){
         d_mg$ABCDRDQ_match<-ABCDRDQ[1]
@@ -183,26 +168,29 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       if(!is.null(tce)){
         if(credentials == '30'){
           lgr$info('Finished assessing TCE permissibility!')
-          updateMGtable(con, 'tce', c(tce,d_itl))
+          #updateMGtable(con, 'tce', c(tce,d_itl))
           lgr$info('TCE value successfully updated!')
         } else if(credentials %in% c('50', '60')){
           d_mg$DRB345DQDP_mm_TCE<-tce
         }
       }
       
-      ##### DSA EVALUATIONS #####
-      mm_alleles<-c(ABC[[2]], DRB1[[2]], DRB345[[2]], DQ[[2]], DP[[2]])
+      gvh_mm_alleles<-c(ABC[[3]], DRB1[[3]], DRB345[[3]], DQ[[3]], DP[[3]])
       
-      #remove N suffix and combine with mm_alleles to evaluate DSA for non-null
+      ##### DSA EVALUATIONS #####
+      hvg_mm_alleles<-c(ABC[[2]], DRB1[[2]], DRB345[[2]], DQ[[2]], DP[[2]])
+      hvg_mm_alleles_eval<-c(unlist(hvg_mm_alleles, use.names = FALSE))
+      
+      #remove N suffix and combine with hvg_mm_alleles to evaluate DSA for non-null
       #variant
       if(!is.null(recip_null_allele)){
-        str_sub(recip_null_allele, -1)<-''
-        mm_alleles<-c(mm_alleles, recip_null_allele)
+        str_sub(hvg_mm_alleles_eval, -1)<-''
+        hvg_mm_alleles_eval<-c(hvg_mm_alleles_eval, recip_null_allele)
       }
       
       lgr$info('Evaluating DSA...')
       if(calculateDSA == TRUE){
-        DSA<-calcDSA(con, mm_alleles, positive_antigens, mfi_vals)
+        DSA<-calcDSA(con, hvg_mm_alleles_eval, positive_antigens, mfi_vals)
       } else if(calculateDSA == FALSE){
         DSA<-'N'
       } else if (calculateDSA == 'Unknown'){
@@ -213,27 +201,58 @@ calcMatchGrade<-function(r_itl, d_itl, username, credentials, recip_hla, recip_n
       
       if(credentials == '30'){
         lgr$info('Updating DSA in Match Grade')
-        updateMGtable(con, 'dsa', c(DSA, d_itl))
+        #updateMGtable(con, 'dsa', c(DSA, d_itl))
         lgr$info('Finished updating DSA in Match Grade')
       } else if(credentials %in% c('50', '60')){
         d_mg$DSA<-DSA
       }
       
-      missing_alleles<-paste(c(ABC[[3]], DRB1[[3]], DRB345[[3]], DQ[[3]], DP[[3]]), collapse = ', ')
+      missing_alleles<-paste(c(ABC[[4]], DRB1[[4]], DRB345[[4]], DQ[[4]], DP[[4]]), collapse = ', ')
       final_missing_message<-NULL
       
       if(missing_alleles != ""){
         final_missing_message<-paste('The following alleles do not have a complete sequence in the IMGT reference alignment for the ARD: <b>', missing_alleles, '</b>. Mismatches may be incorrect. Please check counts.', sep = '')
       }
+      A_mm<-B_mm<-C_mm<-DRB1_mm<-DRB345_mm<-DQA1_mm<-DQB1_mm<-DPA1_mm<-DPB1_mm<-NULL
+      
+      if('A' %in% names(ABC[[3]])){
+        A_mm<-mismatchFormatter('A', ABC[[3]][[1]], ABC[[2]][[1]])
+      }
+      if('B' %in% names(ABC[[3]])){
+        B_mm<-mismatchFormatter('B', ABC[[3]][[2]], ABC[[2]][[2]])
+      }
+      if('C' %in% names(ABC[[3]])){
+        C_mm<-mismatchFormatter('C', ABC[[3]][[3]], ABC[[2]][[3]])
+      }
+      if('DRB1' %in% names(DRB1[[3]])){
+        DRB1_mm<-mismatchFormatter('DRB1', DRB1[[3]][[1]], DRB1[[2]][[1]])
+      }
+      if('DRB345' %in% names(DRB345[[3]])){
+        DRB345_mm<-mismatchFormatter('DRB3/4/5', DRB345[[3]][[1]], DRB345[[2]][[1]])
+      }
+
+      if('DQA1' %in% names(DQ[[3]])){
+        DQA1_mm<-mismatchFormatter('DQA1', DQ[[3]][[1]], DQ[[2]][[1]])
+      }
+      if('DQB1' %in% names(DQ[[3]])){
+        DQB1_mm<-mismatchFormatter('DQB1', DQ[[3]][[2]], DQ[[2]][[2]])
+        
+      }
+      if('DPA1' %in% names(DP[[3]])){
+        DPA1_mm<-mismatchFormatter('DPA1', DP[[3]][[1]], DP[[2]][[1]])
+      }
+      if('DPB1' %in% names(DP[[3]])){
+        DPB1_mm<-mismatchFormatter('DPB1', DP[[3]][[2]], DP[[2]][[2]])
+      }
 
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       
-      return(list('TRUE', log, d_mg[c(36:49)], final_missing_message))
+      return(list('TRUE', d_mg[c(36:49)], final_missing_message, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm))
       
     },
     error = function(e){
       lgr$fatal(e)
-      return(list('FALSE', log, NULL))
+      return(list('FALSE', NULL, NULL, NULL, NULL))
     }
   )
 }

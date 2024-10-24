@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.7.0</b></i></h6>
+    <h6><i><b>Version 1.8.0</b></i></h6>
     <br>
 
     <div class='instruction'>
@@ -40,8 +40,8 @@ getInstructions<-function(){
 
     <div class='instruction'>
         <b>4)</b> Click on the 'Run MGP' button to begin evaluation. A red, busy spinner will appear in the main panel
-        while the program is running. If there are no errors and the run was successful, a message indicating completion
-        will appear. Results will be available for review in the Match Grade application. If the job failed, an error message will appear.
+        while the program is running. If there are no errors and the run was successful, a screen highlighting allele specific mismatches by locus will appear. 
+        Results will be available for review in the Match Grade application. If the job failed, an error message will appear.
     </div>
     
     <div class='instruction'>

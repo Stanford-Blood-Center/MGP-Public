@@ -50,6 +50,9 @@ hr {
 
 .col-sm-8 {
     font-size: 20px;
+    overflow-y: auto;
+    min-height: 200px;
+    max-height: 400px;
 }
 
 .shinybusy-busy {
