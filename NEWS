@@ -1,6 +1,6 @@
 MGP v 1.8.0 10/21/24
 -------------------
-  * Added mismatched alleles for GvH and HvG for ABCDRB1 categories and DRB345DQDP categories to main panel and log
+  * Added mismatched alleles for locus specific alleles to main panel and log
   * Revised logic in calcABCDRB and calcDPDQ - if a recipient mismatched allele has the same P group as a mismatched 
   donor allele, remove the mismatched donor allele from evaluation 
   * Redid logic for handling donor and recipient phenotypes with the same P group - see workflow for more details
