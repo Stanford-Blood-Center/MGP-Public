@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.7.0
+#v1.8.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -165,7 +165,7 @@ server <- function(input, output, session) {
   })
   
   novel<-reactiveValues(syn=NULL, position=NULL, click=1, selection_syn = list(), region_list = list(), totalAlleles = NULL, listNames = NULL, region = NULL)
-  hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL)
+  hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL, log=NULL)
   counter <- reactiveVal(1)
   
   #run MGP button logic
@@ -175,12 +175,21 @@ server <- function(input, output, session) {
     
     con<-dbConn()
     
+    #set up log file
+    hla$log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", patient$itl, '_', sep=""), fileext = ".log")
+    lgr$add_appender(AppenderFile$new(hla$log), name = "mg_log")
+    
+    lgr$info(paste('Executed by mTilda user: ', username$log, sep = ''))
+    sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
+    lgr$info(paste('SUNetID: ', sunetID, sep = ''))
+    
+    lgr$info('Extracting Match Grade data...')
     mg<-getMatchGrade(con, patient$itl)
-    lgr$info('Match Grade data extracted')
     r_mg<-mg %>%
       filter(donor_number == patient$itl)
+    
+    lgr$info('Extracting recipient typing...')
     recip_Typing<-getTyping(con, r_mg, type = 'r')
-    lgr$info('Recipient typing extracted')
 
     hla$recip<-recip_Typing[[1]]
     hla$recipNull<-recip_Typing[[2]]
@@ -188,16 +197,16 @@ server <- function(input, output, session) {
 
     hla$dMG<-mg %>%
       filter(donor_number == donor$selection)
+    
+    lgr$info('Extracting donor typing...')
     donor_Typing<-getTyping(con, hla$dMG, type = 'd')
 
-    lgr$info('Donor typing extracted')
-    
     hla$donor<-donor_Typing[[1]]
 
     donor_novel_alleles<-donor_Typing[[3]]
     
     novel$totalAlleles<-c(recip_novel_alleles, donor_novel_alleles)
-  
+    
     if(!is.null(novel$totalAlleles)){
       hide_spinner()
       novel$listNames<-gsub('Recipient: |Donor: ', '', novel$totalAlleles)
@@ -215,8 +224,10 @@ server <- function(input, output, session) {
       output$sideLog <- renderUI({
         executeMGPUI(module_id, 'log')
       })
-      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, username$log, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG)
-    }
+      
+      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log)
+    
+      }
   })
   
   observeEvent(input$finish,{
@@ -234,7 +245,7 @@ server <- function(input, output, session) {
       executeMGPUI(module_id, 'log')
     })
     
-    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, username$log, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG)
+    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log)
 
   })
   
