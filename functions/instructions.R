@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.8.0</b></i></h6>
+    <h6><i><b>Version 1.9.0</b></i></h6>
     <br>
 
     <div class='instruction'>
@@ -57,11 +57,10 @@ getInstructions<-function(){
     </div>
 
     <div class='instruction'>
-        <b>5)</b> Regardless of the job status, a 'Download log' button will appear in the side panel. If the job failed,
-        please download the log and e-mail it to <b>livtran@stanford.edu</b> for troubleshooting. If the job succeeded,
-        downloading the log is optional. It is recommended to download and review the log to ensure everything ran smoothly.
-        To view updated match values upon job success, click on 'Load Match Grade Donors'
-        in the Match Grade application.
+        <b>5)</b> Regardless of the job status, a 'Download log' button will appear in the side panel. If the job failed without an
+        accompanying message to indicate why, please download the log and e-mail it to <b>livtran@stanford.edu</b> for troubleshooting. 
+        If the job succeeded, downloading the log is optional. It is recommended to download and review the log to ensure everything ran smoothly.
+        To view updated match values upon job success, click on 'Load Match Grade Donors' in the Match Grade application.
     </div>
 
     <h6><b>© 2024 Stanford Blood Center LLC. All rights reserved.</b></h6>

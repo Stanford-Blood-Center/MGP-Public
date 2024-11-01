@@ -1,5 +1,5 @@
 #external functions
-#v 1.8.0
+#v 1.9.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -237,15 +237,16 @@ convertNMDP<-function(n_alleles){
       }
     } else{
       lgr$info(paste(f2[[i]], 'was not found in the NMDP reference file'))
-      nonexistentNMDP<-append(f2[[i]], nonexistentNMDP)
+      nonexistentNMDP<-append(n_alleles[grepl(f2[[i]], n_alleles)], nonexistentNMDP)
     }
   }
   
+  notFoundMessage<-NULL
   if(!is.null(nonexistentNMDP)){
-    stop('NMDP alleles not found in the NMDP reference file')
+    notFoundMessage<-sprintf('%s was not found in the NMDP reference file.', nonexistentNMDP)
   }
   
-  return(unlist(donor_st, use.names=F))
+  return(list(unlist(donor_st, use.names=F), notFoundMessage))
 }
 
 #update dbo.Match_grades table with calculated values
@@ -486,8 +487,13 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList){
     if(length(nmdp_translated)!=0){
       
       for(n in 1:length(nmdp_translated)){
-        d_nmdp<-convertNMDP(names(nmdp_translated)[[n]])
-        nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
+        nmdpRes<-convertNMDP(names(nmdp_translated)[[n]])
+        if(!is.null(nmdpRes[[2]])){
+          return(nmdpRes[[2]])
+        } else{
+          d_nmdp<-nmdpRes[[1]]
+          nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
+        }
       }
     }
     
@@ -810,8 +816,13 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
     
     if(length(nmdp_translated)!=0){
       for(n in 1:length(nmdp_translated)){
-        d_nmdp<-convertNMDP(names(nmdp_translated)[[n]])
-        nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
+        nmdpRes<-convertNMDP(names(nmdp_translated)[[n]])
+        if(!is.null(nmdpRes[[2]])){
+          return(nmdpRes[[2]])
+        } else{
+          d_nmdp<-nmdpRes[[1]]
+          nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
+        }
       }
     }
     
@@ -1039,9 +1050,9 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
     if(grepl('[A-Z]', substr(gsub('.*?:', "", t), 1,1))){
       
       nmdp_allele<-t
-      
+      convertedAllele<-convertNMDP(t)[[1]]
       #use first subtype, which is the most common one
-      t<-paste(locus, convertNMDP(t)[[1]], sep='*')
+      t<-paste(locus, convertedAllele[[1]], sep='*')
     }
     
     allele_mfi<-mfi_vals %>%

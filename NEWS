@@ -1,3 +1,14 @@
+MGP v 1.9.0 11/1/24
+-------------------
+  *Moved MM logic into if mgp$res; otherwise the app crashes instead of the job failure 
+  being captured
+  *Added an error message to the main panel if job failure is due to sample number
+  associated with Recipient DSA Date field in the MG software not having any IgG tests
+  associated
+  *Added an error message to the main panel if the job failure is due to an NMDP code
+  not being found in the NMDP reference file
+  *Updated the NMDP reference file
+  
 MGP v 1.8.0 10/21/24
 -------------------
   * Added mismatched alleles for locus specific alleles to main panel and log

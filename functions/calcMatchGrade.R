@@ -1,4 +1,4 @@
-#v 1.8.0
+#v 1.9.0
 
 options(warn = 2) 
 
@@ -13,6 +13,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       c2_antigen_ref<<-getC2RefAlleles()
       
       lgr$info(paste('Recipient ITL entered:', r_itl))
+      errorMessage<-NULL
       
       con<-dbConn()
 
@@ -32,6 +33,11 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
         #get IgG test numbers to get MFI values and AB screening results
         #for IgG specific tests
         testNums<-paste(getIgGTestNums(con, sample_num), collapse=',')
+        
+        if(testNums == ""){
+          errorMessage<-'The selected DSA date in the Match Grade software does not have any associated IgG tests. Please check the selected DSA date.'
+          stop('Selected DSA date does not have associated IgG tests')
+        }
         
         ab_results<-getAbResults(con, testNums)
         ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
@@ -64,7 +70,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       }
 
       lgr$info(paste('*****Calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
-      
       #load NMDP file if there are any NMDP codes present in the donor typing data
       nmdpCheck<-donor_hla %>%
         select(c(A, B, C, DPA1, DPB1, DQA1, DQB1, DRB1, DRB)) %>%
@@ -82,18 +87,38 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       
       lgr$info('Assessing A, B, and C...')
       ABC<-calcABCDRB('ABC', donor_hla, recip_hla, synnonsynList)
+      if(!is.list(ABC)){
+        errorMessage<-ABC
+        stop('An NMDP allele in the ABC category not found in the NMDP reference file')
+      }
       lgr$info('Finished assessing A, B, and C!')
       lgr$info('Assessing DRB1...')
       DRB1<-calcABCDRB('DRB1', donor_hla, recip_hla, synnonsynList)
+      if(!is.list(DRB1)){
+        errorMessage<-DRB1
+        stop('An NMDP allele for DRB1 was not found in the NMDP reference file')
+      }
       lgr$info('Finished assessing DRB1!')
       lgr$info('Assessing DRB3/4/5...')
       DRB345<-calcABCDRB('DRB', donor_hla, recip_hla, synnonsynList)
+      if(!is.list(DRB345)){
+        errorMessage<-DRB345
+        stop('An NMDP allele for DRB345 was not found in the NMDP reference file')
+      }
       lgr$info('Finished assessing DRB3/4/5!')
       lgr$info('Assessing DP...')
       DP<-calcDQDP('DP', donor_hla, recip_hla, synnonsynList)
+      if(!is.list(DP)){
+        errorMessage<-DP
+        stop('An NMDP allele for DP was not found in the NMDP reference file')
+      }
       lgr$info('Finished assessing DP!')
       lgr$info('Assessing DQ...')
       DQ<-calcDQDP('DQ', donor_hla, recip_hla, synnonsynList)
+      if(!is.list(DQ)){
+        errorMessage<-DQ
+        stop('An NMDP allele for DQ was not found in the NMDP reference file')
+      }
       lgr$info('Finished assessing DQ!')
       
       #ABC-DR-DQ
@@ -108,7 +133,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       #ABC-DRB1
       #match, total, mm gvh, mm hvg
       lgr$info('Summing values for the ABC-DRB1 category...')
-      
       ABCDRB1<-ABC[[1]]+DRB1[[1]]
       
       #print(ABCDRB1)
@@ -247,12 +271,12 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
 
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       
-      return(list('TRUE', d_mg[c(36:49)], final_missing_message, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm))
+      return(list('TRUE', d_mg[c(36:49)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm))
       
     },
     error = function(e){
       lgr$fatal(e)
-      return(list('FALSE', NULL, NULL, NULL, NULL))
+      return(list('FALSE', NULL, NULL, errorMessage))
     }
   )
 }
