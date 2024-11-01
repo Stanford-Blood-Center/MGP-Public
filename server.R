@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.8.0
+#v1.9.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -178,7 +178,7 @@ server <- function(input, output, session) {
     #set up log file
     hla$log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", patient$itl, '_', sep=""), fileext = ".log")
     lgr$add_appender(AppenderFile$new(hla$log), name = "mg_log")
-    
+
     lgr$info(paste('Executed by mTilda user: ', username$log, sep = ''))
     sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
     lgr$info(paste('SUNetID: ', sunetID, sep = ''))

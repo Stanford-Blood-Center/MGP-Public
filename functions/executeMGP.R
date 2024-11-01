@@ -1,4 +1,4 @@
-#v 1.8.0
+#v 1.9.0
 
 library(shiny)
 
@@ -23,7 +23,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
        ns <- session$ns
        
        mgp<-reactiveValues(result=NULL, mgDBTable=NULL, mgpTable=NULL, missing_seq=NULL, A_mm = NULL, B_mm = NULL, C_mm = NULL, DRB1_mm = NULL, DRB345_mm= NULL, DQA1_mm = NULL,
-                           DQB1_mm = NULL, DPA1_mm = NULL, DPB1_mm = NULL)
+                           DQB1_mm = NULL, DPA1_mm = NULL, DPB1_mm = NULL, fail_message = NULL)
        final<-reactiveValues(log_path = log, result=NULL, df=NULL, mgpTable=NULL, mgDBTable=NULL)
         
                                                 ##### OUTPUT DIFFERENCES #####
@@ -49,21 +49,21 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
         run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade)})
 
         mgp$result<-run_res[[1]]
-        #final$log_path<-run_res[[2]]
         df<-run_res[[2]]
         mgp$missing_seq<-run_res[[3]]
+        mgp$fail_message<-run_res[[4]]
         
-        mgp$A_mm<-run_res[[4]]
-        mgp$B_mm<-run_res[[5]]
-        mgp$C_mm<-run_res[[6]]
-        mgp$DRB1_mm<-run_res[[7]]
-        mgp$DRB345_mm<-run_res[[8]]
-        mgp$DQA1_mm<-run_res[[9]]
-        mgp$DQB1_mm<-run_res[[10]]
-        mgp$DPA1_mm<-run_res[[11]]
-        mgp$DPB1_mm<-run_res[[12]]
-      
         if(mgp$result){
+          mgp$A_mm<-run_res[[4]]
+          mgp$B_mm<-run_res[[5]]
+          mgp$C_mm<-run_res[[6]]
+          mgp$DRB1_mm<-run_res[[7]]
+          mgp$DRB345_mm<-run_res[[8]]
+          mgp$DQA1_mm<-run_res[[9]]
+          mgp$DQB1_mm<-run_res[[10]]
+          mgp$DPA1_mm<-run_res[[11]]
+          mgp$DPB1_mm<-run_res[[12]]
+          
           message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
           if(!is.null(mgp$missing_seq)){
             showModal(missingModal(mgp$missing_seq))
@@ -73,12 +73,28 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
           hide_spinner()
           #message
         } else{
-          message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
-          lgr$info(sprintf(message, paste(patient, 'failed'), 'livtran@stanford.edu'))
+          message<-'Match Grade evaluations for recipient ITL %s %s'
+          if(!is.null(mgp$fail_message)){
+            #no IgG tests selected error
+            if(!grepl('NMDP', mgp$fail_message)){
+              message<-paste(message, mgp$fail_message, sep = '')
+              lgr$info(sprintf(message, patient, 'failed. '))
+              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
+            } else{
+              #NMDP code not found error
+              message<-paste(message, mgp$fail_message, ' Please e-mail %s to update the NMDP reference file.', sep = '')
+              lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
+              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.<br><br>', '<b>livtran@stanford.edu</b>'))
+            }
+          } else{
+            message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
+            lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
+            uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
+          }
           lgr$info('**********MATCH GRADE EVALUATION END**********')
           hide_spinner()
-          HTML(sprintf(message, paste(patient, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
-        } 
+          uiOutMess
+        }
       })
     } else if(creds %in% c('50', '60')){
 
@@ -110,24 +126,24 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
         output$mgTable<-renderUI({
           
           run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade)})
-
           mgp$result<-run_res[[1]]
-          #final$log_path<-run_res[[2]]
           df<-run_res[[2]]
           mgp$missing_seq<-run_res[[3]]
-          
-          mgp$A_mm<-run_res[[4]]
-          mgp$B_mm<-run_res[[5]]
-          mgp$C_mm<-run_res[[6]]
-          mgp$DRB1_mm<-run_res[[7]]
-          mgp$DRB345_mm<-run_res[[8]]
-          mgp$DQA1_mm<-run_res[[9]]
-          mgp$DQB1_mm<-run_res[[10]]
-          mgp$DPA1_mm<-run_res[[11]]
-          mgp$DPB1_mm<-run_res[[12]]
+          mgp$fail_message<-run_res[[4]]
           
           
           if(mgp$result){
+            
+            mgp$A_mm<-run_res[[4]]
+            mgp$B_mm<-run_res[[5]]
+            mgp$C_mm<-run_res[[6]]
+            mgp$DRB1_mm<-run_res[[7]]
+            mgp$DRB345_mm<-run_res[[8]]
+            mgp$DQA1_mm<-run_res[[9]]
+            mgp$DQB1_mm<-run_res[[10]]
+            mgp$DPA1_mm<-run_res[[11]]
+            mgp$DPB1_mm<-run_res[[12]]
+            
             mgp$mgpTable<-df %>%
               replace(is.na(.), '') %>%
               relocate(ABCDRDQ_match, .before = ABCDRDQ_alleles) %>%
@@ -147,11 +163,27 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
               DT::renderDT(mgp$mgpTable, options = list(dom = 't', scrollX = TRUE, ordering = FALSE), rownames = FALSE),
               br())
           } else{
-            message<-'Match Grade evaluations for recipient ITL %s. Please download the log and e-mail it to %s to troubleshoot.'
-            lgr$info(sprintf(message, paste(patient, 'failed'), 'livtran@stanford.edu'))
+            message<-'Match Grade evaluations for recipient ITL %s %s'
+            if(!is.null(mgp$fail_message)){
+              #no IgG tests selected error
+              if(!grepl('NMDP', mgp$fail_message)){
+                message<-paste(message, mgp$fail_message, sep = '')
+                lgr$info(sprintf(message, patient, 'failed. '))
+                uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
+              } else{
+                #NMDP code not found error
+                message<-paste(message, mgp$fail_message, ' Please e-mail %s to update the NMDP reference file.', sep = '')
+                lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
+                uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.<br><br>', '<b>livtran@stanford.edu</b>'))
+              }
+            } else{
+              message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
+              lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
+              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
+            }
             lgr$info('**********MATCH GRADE EVALUATION END**********')
             hide_spinner()
-            HTML(sprintf(message, paste(patient, ' <b><span style=color:red;>failed</b></span>', sep=""), '<b>livtran@stanford.edu</b>'))
+            uiOutMess
           }
         })
         
