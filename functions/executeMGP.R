@@ -1,4 +1,4 @@
-#v 1.9.0
+#v 1.9.1
 
 library(shiny)
 
@@ -54,15 +54,15 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
         mgp$fail_message<-run_res[[4]]
         
         if(mgp$result){
-          mgp$A_mm<-run_res[[4]]
-          mgp$B_mm<-run_res[[5]]
-          mgp$C_mm<-run_res[[6]]
-          mgp$DRB1_mm<-run_res[[7]]
-          mgp$DRB345_mm<-run_res[[8]]
-          mgp$DQA1_mm<-run_res[[9]]
-          mgp$DQB1_mm<-run_res[[10]]
-          mgp$DPA1_mm<-run_res[[11]]
-          mgp$DPB1_mm<-run_res[[12]]
+          mgp$A_mm<-run_res[[5]]
+          mgp$B_mm<-run_res[[6]]
+          mgp$C_mm<-run_res[[7]]
+          mgp$DRB1_mm<-run_res[[8]]
+          mgp$DRB345_mm<-run_res[[9]]
+          mgp$DQA1_mm<-run_res[[10]]
+          mgp$DQB1_mm<-run_res[[11]]
+          mgp$DPA1_mm<-run_res[[12]]
+          mgp$DPB1_mm<-run_res[[13]]
           
           message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
           if(!is.null(mgp$missing_seq)){
@@ -134,15 +134,15 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
           
           if(mgp$result){
             
-            mgp$A_mm<-run_res[[4]]
-            mgp$B_mm<-run_res[[5]]
-            mgp$C_mm<-run_res[[6]]
-            mgp$DRB1_mm<-run_res[[7]]
-            mgp$DRB345_mm<-run_res[[8]]
-            mgp$DQA1_mm<-run_res[[9]]
-            mgp$DQB1_mm<-run_res[[10]]
-            mgp$DPA1_mm<-run_res[[11]]
-            mgp$DPB1_mm<-run_res[[12]]
+            mgp$A_mm<-run_res[[5]]
+            mgp$B_mm<-run_res[[6]]
+            mgp$C_mm<-run_res[[7]]
+            mgp$DRB1_mm<-run_res[[8]]
+            mgp$DRB345_mm<-run_res[[9]]
+            mgp$DQA1_mm<-run_res[[10]]
+            mgp$DQB1_mm<-run_res[[11]]
+            mgp$DPA1_mm<-run_res[[12]]
+            mgp$DPB1_mm<-run_res[[13]]
             
             mgp$mgpTable<-df %>%
               replace(is.na(.), '') %>%
