@@ -1,5 +1,5 @@
 #external functions
-#v 1.9.0
+#v 1.9.1
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -860,8 +860,8 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList){
         d_gvh_prot<-align %>%
           filter(trimmed_allele %in% c(d_locus_alleles)) %>%
           distinct(trimmed_allele, .keep_all = TRUE) %>%
-          select(as.character(seq(1, 90))) %>%
-          unite(., 'all', sep='') 
+          select(c(trimmed_allele,as.character(seq(1, 90)))) %>%
+          unite(.,'all', -trimmed_allele, sep='')
         
         reg_flag<-!any(r_gvh_prot == d_gvh_prot$all)
         
