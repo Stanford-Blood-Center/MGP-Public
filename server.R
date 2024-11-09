@@ -165,7 +165,7 @@ server <- function(input, output, session) {
   })
   
   novel<-reactiveValues(syn=NULL, position=NULL, click=1, selection_syn = list(), region_list = list(), totalAlleles = NULL, listNames = NULL, region = NULL)
-  hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL, log=NULL)
+  hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL, log=NULL, filter_donor = NULL, filter_recip = NULL)
   counter <- reactiveVal(1)
   
   #run MGP button logic
@@ -190,11 +190,11 @@ server <- function(input, output, session) {
     
     lgr$info('Extracting recipient typing...')
     recip_Typing<-getTyping(con, r_mg, type = 'r')
-
     hla$recip<-recip_Typing[[1]]
     hla$recipNull<-recip_Typing[[2]]
     recip_novel_alleles<- recip_Typing[[3]]
-
+    hla$filter_recip<-recip_Typing[[4]]
+    
     hla$dMG<-mg %>%
       filter(donor_number == donor$selection)
     
@@ -204,6 +204,7 @@ server <- function(input, output, session) {
     hla$donor<-donor_Typing[[1]]
 
     donor_novel_alleles<-donor_Typing[[3]]
+    hla$filter_donor<-donor_Typing[[4]]
     
     novel$totalAlleles<-c(recip_novel_alleles, donor_novel_alleles)
     
@@ -225,7 +226,7 @@ server <- function(input, output, session) {
         executeMGPUI(module_id, 'log')
       })
       
-      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log)
+      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log, hla$filter_donor, hla$filter_recip)
     
       }
   })
