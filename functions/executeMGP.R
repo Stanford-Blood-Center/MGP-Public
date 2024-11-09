@@ -14,7 +14,7 @@ executeMGPUI<- function(id, type) {
 }
 
 
-executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, log) {
+executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, log, donor_filter, recip_filter) {
  
    moduleServer(
      id,
@@ -46,7 +46,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
 
       output$finish_text<-renderUI({
         
-        run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade)})
+        run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
 
         mgp$result<-run_res[[1]]
         df<-run_res[[2]]
@@ -125,7 +125,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
         #MGP output
         output$mgTable<-renderUI({
           
-          run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade)})
+          run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
           mgp$result<-run_res[[1]]
           df<-run_res[[2]]
           mgp$missing_seq<-run_res[[3]]
@@ -240,10 +240,15 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
           req(mgp$result)
 
           if(mgp$result == 'TRUE'){
+            
             mm_mess<-paste0(mgp$A_mm, mgp$B_mm, mgp$C_mm, mgp$DRB1_mm, mgp$DRB345_mm, mgp$DQA1_mm, mgp$DQB1_mm, mgp$DPA1_mm, mgp$DPB1_mm)
-            if(length(mm_mess)==0){
+            
+            #if the number of loci (indicated by style yellow due to highlighting) * 2 is equal to the 
+            #number of Nones (None per GvH and HvG), return None for mismatches
+            if(str_count(mm_mess, 'None') == str_count(mm_mess, 'yellow')*2){
               mm_mess<-'<h4 style="font-weight:bold; text-align:center;">None</h4>'
             }
+
             tagList(
               h3('Mismatches', style = 'font-weight:bold; text-align:center; margin-top: 1px;'),
               HTML(mm_mess))

@@ -1,3 +1,17 @@
+MGP v 1.10.0 11/8/24
+-------------------
+  * Bug fixes
+    -corrected issue w. DRB345 not showing up in mismatches
+    -fixed DSA issue with NULL variants; hvg_mm_allele was used instead of 
+    recip_null_allele when subbing out the last character of the NULL variant
+    -used %in% instead of == w/ comparing mismatched alleles and same p-group
+    in cases where the mismatched allele has the same p-group as multiple alleles
+    -redid logic for handling NULL variants and alleles with the same p-group - see workflow for more details
+    -corrected issue with grepl(mm_locus), where NMDP alleles with the same letter as the locus would cause issues
+  * Added logic for cases where DP alleles have the same p-group, leading to no 
+  mismatches - TCE in these cases should be M
+  *Updated NMDP reference file
+    
 MGP v 1.9.1 11/4/24
 -------------------
   * Bug fixes - fixed order of loci MM display and added trimmed_allele 

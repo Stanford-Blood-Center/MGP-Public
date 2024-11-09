@@ -1,10 +1,10 @@
-#v 1.9.0
+#v 1.10.0
 
 options(warn = 2) 
 
 suppressPackageStartupMessages(library(lgr))
 
-calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele, donor_hla, synnonsynList, d_mg){
+calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele, donor_hla, synnonsynList, d_mg, d_filter, r_filter){
   
   tryCatch(
     {
@@ -84,37 +84,40 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       ##### MATCH EVALUATIONS #####
       
       lgr$info('Donor typing extracted')
-      
       lgr$info('Assessing A, B, and C...')
-      ABC<-calcABCDRB('ABC', donor_hla, recip_hla, synnonsynList)
+
+      ABC<-calcABCDRB('ABC', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
       if(!is.list(ABC)){
         errorMessage<-ABC
         stop('An NMDP allele in the ABC category not found in the NMDP reference file')
       }
       lgr$info('Finished assessing A, B, and C!')
       lgr$info('Assessing DRB1...')
-      DRB1<-calcABCDRB('DRB1', donor_hla, recip_hla, synnonsynList)
+
+      DRB1<-calcABCDRB('DRB1', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
       if(!is.list(DRB1)){
         errorMessage<-DRB1
         stop('An NMDP allele for DRB1 was not found in the NMDP reference file')
       }
       lgr$info('Finished assessing DRB1!')
+      
       lgr$info('Assessing DRB3/4/5...')
-      DRB345<-calcABCDRB('DRB', donor_hla, recip_hla, synnonsynList)
+      DRB345<-calcABCDRB('DRB', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
       if(!is.list(DRB345)){
         errorMessage<-DRB345
         stop('An NMDP allele for DRB345 was not found in the NMDP reference file')
       }
       lgr$info('Finished assessing DRB3/4/5!')
       lgr$info('Assessing DP...')
-      DP<-calcDQDP('DP', donor_hla, recip_hla, synnonsynList)
+      DP<-calcDQDP('DP', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
       if(!is.list(DP)){
         errorMessage<-DP
         stop('An NMDP allele for DP was not found in the NMDP reference file')
       }
+      
       lgr$info('Finished assessing DP!')
       lgr$info('Assessing DQ...')
-      DQ<-calcDQDP('DQ', donor_hla, recip_hla, synnonsynList)
+      DQ<-calcDQDP('DQ', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
       if(!is.list(DQ)){
         errorMessage<-DQ
         stop('An NMDP allele for DQ was not found in the NMDP reference file')
@@ -147,7 +150,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       }
       
       #print(DRB345DQDP)
-      
       #7 LOCI TOTAL
       #match, total
       #return NA if any of the 7 loci have not been sequenced
@@ -186,7 +188,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       
       ##### TCE EVALUATIONS #####
       lgr$info('Assessing TCE permissibility...')
-      tce<-getTCE(donor_hla, recip_hla)
+      tce<-getTCE(donor_hla, recip_hla, DP[[5]])
       
       print(tce)
       if(!is.null(tce)){
@@ -208,7 +210,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       #remove N suffix and combine with hvg_mm_alleles to evaluate DSA for non-null
       #variant
       if(!is.null(recip_null_allele)){
-        str_sub(hvg_mm_alleles_eval, -1)<-''
+        str_sub(recip_null_allele, -1)<-''
         hvg_mm_alleles_eval<-c(hvg_mm_alleles_eval, recip_null_allele)
       }
       
@@ -248,10 +250,12 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       if('C' %in% names(ABC[[3]])){
         C_mm<-mismatchFormatter('C', ABC[[3]][[3]], ABC[[2]][[3]])
       }
+      
       if('DRB1' %in% names(DRB1[[3]])){
         DRB1_mm<-mismatchFormatter('DRB1', DRB1[[3]][[1]], DRB1[[2]][[1]])
       }
-      if('DRB345' %in% names(DRB345[[3]])){
+
+      if('DRB' %in% names(DRB345[[3]])){
         DRB345_mm<-mismatchFormatter('DRB3/4/5', DRB345[[3]][[1]], DRB345[[2]][[1]])
       }
 
