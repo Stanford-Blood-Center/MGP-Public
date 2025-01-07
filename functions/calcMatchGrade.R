@@ -71,15 +71,15 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
 
       lgr$info(paste('*****Calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       #load NMDP file if there are any NMDP codes present in the donor typing data
-      nmdpCheck<-donor_hla %>%
-        select(c(A, B, C, DPA1, DPB1, DQA1, DQB1, DRB1, DRB)) %>%
+      #nmdpCheck<-donor_hla %>%
+      #  select(c(A, B, C, DPA1, DPB1, DQA1, DQB1, DRB1, DRB)) %>%
         #check if character directly after the colon is a letter
-        mutate_all(~grepl(':[A-WYZ]', .))
+      #  mutate_all(~grepl(':[A-WYZ]', .))
       
-      if(any(nmdpCheck)){
-        nmdp_file<<-loadNMDP()
-        lgr$info('NMDP typing detected. NMDP conversion file loaded.')
-      }
+      #if(any(nmdpCheck)){
+      #  nmdp_file<<-loadNMDP()
+      #  lgr$info('NMDP typing detected. NMDP conversion file loaded.')
+      #}
       
       ##### MATCH EVALUATIONS #####
       

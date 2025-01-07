@@ -1,5 +1,5 @@
 #external functions
-#v 1.10.0
+#v 1.11.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -224,41 +224,34 @@ getTyping<-function(con, mgDF, type){
 
 
 #convert NMDP code to subtype 
-convertNMDP<-function(n_alleles){
+convertNMDP<-function(n_allele){
   
-  f1<-gsub('.*?(.*?)\\*', "\\1", sapply(strsplit(n_alleles, ':'), '[[', 1))
-  f2<-sapply(strsplit(n_alleles, ':'), '[[', 2) 
+  f1<-gsub('.*?(.*?)\\*', "\\1", sapply(strsplit(n_allele, ':'), '[[', 1))
+  f2<-sapply(strsplit(n_allele, ':'), '[[', 2) 
   
   donor_st<-sapply(f1, function(x) NULL)
-  nonexistentNMDP<-c()
+  browser()
+  subtypes<-GET(
+    url=sprintf('https://hml.nmdp.org/mac/api/codes/%s', f2), 
+    add_headers(Accept = 'text/plain')
+  )
   
-  for(i in 1:length(f2)){
-    
-    nmdpFilter<-nmdp_file %>%
-      filter(code %in% c(f2[[i]])) %>%
-      pull() %>%
-      strsplit('/') %>%
-      unlist()
-    
-    if(!is.null(nmdpFilter)){
-      donor_st[[i]]<-nmdpFilter
-      
-      #paste first field to subtype if not present in NDMP codelist
-      if(any(!grepl(':', donor_st[[i]]))){
-        donor_st[[i]]<-paste(names(donor_st)[[i]], donor_st[[i]], sep =":")
-      }
-    } else{
-      lgr$info(paste(f2[[i]], 'was not found in the NMDP reference file'))
-      nonexistentNMDP<-append(n_alleles[grepl(f2[[i]], n_alleles)], nonexistentNMDP)
-    }
+  if(subtypes$status_code != 200){
+    stop(sprintf('Status code %s returned from the MAC API for %s. Terminating session...', subtypes$status_code, n_allele))
   }
   
-  notFoundMessage<-NULL
-  if(!is.null(nonexistentNMDP)){
-    notFoundMessage<-sprintf('%s was not found in the NMDP reference file.', nonexistentNMDP)
-  }
+  #get subtypes
+  subtype<-strsplit(strsplit(trimws(gsub('\t|\\*', ' ', content(subtypes, encoding = 'UTF-8'))), ' ')[[1]][[2]], '/')[[1]]
   
-  return(list(unlist(donor_st, use.names=F), notFoundMessage))
+  #if subtype does not already have first two fields, paste it
+  if(any(!grepl(':', subtype))){
+    donor_st<-paste(names(donor_st), subtype, sep=':')
+  } else{
+    donor_st<-subtype
+  }
+
+  return(unlist(donor_st, use.names=F))
+
 }
 
 #update dbo.Match_grades table with calculated values
@@ -492,14 +485,11 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
     
     if(length(nmdp_translated)!=0){
+      lgr$info('NMDP typing detected. Converting NMDP alleles...')
       for(n in 1:length(nmdp_translated)){
         nmdpRes<-convertNMDP(names(nmdp_translated)[[n]])
-        if(!is.null(nmdpRes[[2]])){
-          return(nmdpRes[[2]])
-        } else{
-          d_nmdp<-nmdpRes[[1]]
-          nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
-        }
+        nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), nmdpRes, sep="*")
+        
       }
     }
     
@@ -817,14 +807,9 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     if(length(nmdp_translated)!=0){
       for(n in 1:length(nmdp_translated)){
         nmdpRes<-convertNMDP(names(nmdp_translated)[[n]])
-        if(!is.null(nmdpRes[[2]])){
-          return(nmdpRes[[2]])
-        } else{
-          d_nmdp<-nmdpRes[[1]]
-          nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), d_nmdp, sep="*")
+        nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), nmdpRes, sep="*")
         }
       }
-    }
     
     missing_message<-c()
     gvh_alleles<-sapply(group, function(x) c())
@@ -1039,6 +1024,9 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
     return(call_dsa)
   }
   
+  mfi_vals<-mfi_vals %>%
+    filter(!antigen %in% c('Bw4', 'Bw6'))
+  
   for(t in mismatched_alleles){
     
     #if any novel alleles, 
@@ -1050,6 +1038,9 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
     if(str_sub(t, -1) =='Q' & str_count('Q', '[[:alpha:]]') == 1){
       lgr$info(sprintf('Skipping %s for DSA analysis', t))
       next
+    }
+    if(str_sub(t, -1) =='L' & str_count('Q', '[[:alpha:]]') == 1){
+      t<-gsub('L', '', t)
     }
     
     locus<-gsub('^(.*?)\\*.*$', '\\1', t)
@@ -1158,7 +1149,13 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
       mutate(bool=average_value>2000) 
     
     mfi_bool<-mfi_eval%>%
+      filter(!is.na(allele)) %>%
       pull(bool)
+    
+    #A*02:03 is called differently than A2
+    if('A203' %in% called_antibodies){
+      called_antibodies<-append(called_antibodies, 'A*02:03')
+    }
     
     if(any(mfi_bool)){
       if(!is.null(nmdp_allele)){

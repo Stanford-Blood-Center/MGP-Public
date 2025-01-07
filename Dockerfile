@@ -4,8 +4,8 @@
 # We'll be bringing in a specific Shiny version, so we can't use their Shiny
 # container images.  Instead, we'll use their reproducable images.
 # NOTE: This is where the R version is set!
-FROM rocker/r-ver:4.3.2
-LABEL org.opencontainers.image.base.name="rocker/r-ver:4.3.2"
+FROM rocker/r-ver:4.4.2
+LABEL org.opencontainers.image.base.name="rocker/r-ver:4.4.2"
 
 # Set some image metadata!
 # NOTE: Some of the OCI labels are set automatically by the GitHub Actions workflow.
@@ -36,12 +36,15 @@ RUN apt-get update && apt-get install -y curl && \
 	apt-get purge -y curl && apt-get autoremove -y
 
 # Install any OS-level packages that we need for our R packages.
+# unixodbc-dev is used by the odbc R package.
+# zlib1g-dev is used by the httpuv R package.
+# pkg-config is used since we're bringing in dev packages.
 # ACCEPT_EULA is used by msodbcsql17
 # NOTE: We avoid the driver for SQL Server 18, becaue it enables encryption by
 # default.
 ARG ACCEPT_EULA=y
 RUN apt-get update && \
-  apt-get install -y libodbc2 msodbcsql17 && \
+  apt-get install -y libodbc2 libcurl4-openssl-dev libssl-dev libxml2-dev msodbcsql17 pkg-config unixodbc-dev zlib1g-dev && \
 	apt-get clean && rm -rf /tmp/*
 
 # Copy all of the files into the container's scripts directory, and set that to
@@ -68,11 +71,11 @@ RUN R -q -e 'renv::settings$use.cache(FALSE)' -e 'renv::restore()' && \
 
 # Declare the environment variables we want, and set some default values.
 # NOTE: It's understood that these defaults won't work in production.
-ENV SERVER 127.0.0.1
-ENV DB noDB
-ENV DB_USERNAME noUsername
-ENV DB_PW noPassword
-ENV TZ US/Pacific
+ENV SERVER=127.0.0.1
+ENV DB=noDB
+ENV DB_USERNAME=noUsername
+ENV DB_PW=noPassword
+ENV TZ=US/Pacific
 
 # When the container is run without an explicit command, this is what we do:
 # Start our Shiny app!  Listen on port 3838, and expose that to the outside.
