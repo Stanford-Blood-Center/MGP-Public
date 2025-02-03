@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.11.0
+#v1.12.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -199,6 +199,7 @@ server <- function(input, output, session) {
       filter(donor_number == donor$selection)
     
     lgr$info('Extracting donor typing...')
+    
     donor_Typing<-getTyping(con, hla$dMG, type = 'd')
 
     hla$donor<-donor_Typing[[1]]

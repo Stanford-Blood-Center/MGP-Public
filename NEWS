@@ -1,3 +1,13 @@
+MGP v 1.12.0 2/3/25
+-------------------
+  * fixed issue with incorrect DSA calling for class II 
+  * changed DSA evaluation to evaluate all alleles 
+  * DSAs along with MFIs now appear in the UI if there are DSAs
+  * added DP comparison code in getTCE to evaluate same p-groups
+  * added code to take into account abs that are called differently if called asp
+  * code refactoring to avoid redundancy in executeMGP
+  * removed NMDP reference file checks
+  
 MGP v 1.11.0 1/5/25
 -------------------
   * Changed logic for NMDP code conversion - removed NMDP reference file and use MAC API instead

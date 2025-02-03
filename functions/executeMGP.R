@@ -1,4 +1,4 @@
-#v 1.9.1
+#v 1.12.0
 
 library(shiny)
 
@@ -23,7 +23,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
        ns <- session$ns
        
        mgp<-reactiveValues(result=NULL, mgDBTable=NULL, mgpTable=NULL, missing_seq=NULL, A_mm = NULL, B_mm = NULL, C_mm = NULL, DRB1_mm = NULL, DRB345_mm= NULL, DQA1_mm = NULL,
-                           DQB1_mm = NULL, DPA1_mm = NULL, DPB1_mm = NULL, fail_message = NULL)
+                           DQB1_mm = NULL, DPA1_mm = NULL, DPB1_mm = NULL, fail_message = NULL, df = NULL)
        final<-reactiveValues(log_path = log, result=NULL, df=NULL, mgpTable=NULL, mgDBTable=NULL)
         
                                                 ##### OUTPUT DIFFERENCES #####
@@ -32,160 +32,115 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
        
        if(creds == '30'){
         output$spinner <- renderUI({
-            tagList(uiOutput(ns('finish_text')), uiOutput(ns('mmAlleles')))
+            tagList(uiOutput(ns('errorText')), uiOutput(ns('dsaMess')), uiOutput(ns('mmAlleles')))
           })
        } else if(creds %in% c('50', '60')){
         output$spinner <-renderUI({
-          tagList(uiOutput(ns('comparisonText')), uiOutput(ns('mgTable')), uiOutput(ns('mgPopulationTable')), uiOutput(ns('mmAlleles')))
+          tagList(uiOutput(ns('errorText')), uiOutput(ns('comparisonText')), uiOutput(ns('dsaMess')), uiOutput(ns('mgTable')), uiOutput(ns('mgPopulationTable')), uiOutput(ns('mmAlleles')))
         })
        }
-      
-                                                     ##### CALCULATION #####
        
-      if(creds == '30'){ 
+       observe({
+         
+         run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
+         
+         mgp$result<-run_res[[1]]
+         mgp$df<-run_res[[2]]
+         mgp$missing_seq<-run_res[[3]]
+         mgp$fail_message<-run_res[[4]]
 
-      output$finish_text<-renderUI({
-        
-        run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
+         if(mgp$result){
+           mgp$A_mm<-run_res[[5]]
+           mgp$B_mm<-run_res[[6]]
+           mgp$C_mm<-run_res[[7]]
+           mgp$DRB1_mm<-run_res[[8]]
+           mgp$DRB345_mm<-run_res[[9]]
+           mgp$DQA1_mm<-run_res[[10]]
+           mgp$DQB1_mm<-run_res[[11]]
+           mgp$DPA1_mm<-run_res[[12]]
+           mgp$DPB1_mm<-run_res[[13]]
+           mgp$dsainfo<-run_res[[14]]
 
-        mgp$result<-run_res[[1]]
-        df<-run_res[[2]]
-        mgp$missing_seq<-run_res[[3]]
-        mgp$fail_message<-run_res[[4]]
+           message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
+           if(!is.null(mgp$missing_seq)){
+             showModal(missingModal(mgp$missing_seq))
+           }
+           lgr$info(message)
+           lgr$info('**********MATCH GRADE EVALUATION END**********')
+           hide_spinner()
+         } else{
+           output$errorText<-renderUI({
+             
+               message<-'Match Grade evaluations for recipient ITL %s %s'
+               if(!is.null(mgp$fail_message)){
+                 #no IgG tests selected error
+                 message<-paste(message, mgp$fail_message, sep = '')
+                 lgr$info(sprintf(message, patient, 'failed. '))
+                 uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
+               } else{
+                 message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
+                 lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
+                 uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
+               }
+               lgr$info('**********MATCH GRADE EVALUATION END**********')
+               hide_spinner()
+               uiOutMess
+          })
+         }
+       })
+      
+                                                     ##### REVIEW MODE OUTPUTS #####
+    if(creds %in% c('50', '60')){
+      
+      #difference comparison output
+      output$comparisonText<-renderUI({
+        req(mgp$result)
+        if(mgp$result == 'TRUE'){
+          
+          comparison<-all.equal(mgp$mgDBTable, mgp$mgpTable)
+          
+          baseText<-"<b>Mismatched columns: </b>"
+          
+          if(length(comparison)==1 & any(!grepl('Component', comparison))){
+            comparison<-'<h4 style="font-weight:bold; text-align:center;">None</h4>'
+          } else{
+            #[\u201C\u201D] = curly quotes
+            comparison<-paste(gsub("[\u201C\u201D]", "", str_extract(comparison, "(?<=Component )[^:]+")), collapse = ', ')
+          }
+          tagList(
+            h3('Mismatched columns', style = 'text-align: center; font-weight: bold;'),
+            HTML(paste0('<div style="text-align: center;">', comparison, '</div>'))
+          )
+        } else{
+          NULL
+        }
+      })
+      
+      #MGP output
+      output$mgTable<-renderUI({
         
         if(mgp$result){
-          mgp$A_mm<-run_res[[5]]
-          mgp$B_mm<-run_res[[6]]
-          mgp$C_mm<-run_res[[7]]
-          mgp$DRB1_mm<-run_res[[8]]
-          mgp$DRB345_mm<-run_res[[9]]
-          mgp$DQA1_mm<-run_res[[10]]
-          mgp$DQB1_mm<-run_res[[11]]
-          mgp$DPA1_mm<-run_res[[12]]
-          mgp$DPB1_mm<-run_res[[13]]
           
-          message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
+          mgp$mgpTable<-mgp$df %>%
+            replace(is.na(.), '') %>%
+            relocate(ABCDRDQ_match, .before = ABCDRDQ_alleles) %>%
+            relocate(ABCDRB1_match, .before = ABCDRB1_alleles) %>%
+            relocate(DRB345DQDP_match, .before= DRB345DQDP_alleles) %>%
+            relocate(Seven_loci_alleles, .before= seven_loci_match)
+          
+          hide_spinner()
+          
           if(!is.null(mgp$missing_seq)){
             showModal(missingModal(mgp$missing_seq))
           }
-          lgr$info(message)
-          lgr$info('**********MATCH GRADE EVALUATION END**********')
-          hide_spinner()
-          #message
-        } else{
-          message<-'Match Grade evaluations for recipient ITL %s %s'
-          if(!is.null(mgp$fail_message)){
-            #no IgG tests selected error
-            if(!grepl('NMDP', mgp$fail_message)){
-              message<-paste(message, mgp$fail_message, sep = '')
-              lgr$info(sprintf(message, patient, 'failed. '))
-              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
-            } else{
-              #NMDP code not found error
-              message<-paste(message, mgp$fail_message, ' Please e-mail %s to update the NMDP reference file.', sep = '')
-              lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
-              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.<br><br>', '<b>livtran@stanford.edu</b>'))
-            }
-          } else{
-            message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
-            lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
-            uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
-          }
-          lgr$info('**********MATCH GRADE EVALUATION END**********')
-          hide_spinner()
-          uiOutMess
+          
+          tagList(
+            hr(),
+            h3('MGP Results', style = "text-align: center; font-weight: bold;"),
+            DT::renderDT(mgp$mgpTable, options = list(dom = 't', scrollX = TRUE, ordering = FALSE), rownames = FALSE),
+            br())
         }
       })
-    } else if(creds %in% c('50', '60')){
-
-        #difference comparison output
-        output$comparisonText<-renderUI({
-          req(mgp$result)
-          if(mgp$result == 'TRUE'){
-            
-            comparison<-all.equal(mgp$mgDBTable, mgp$mgpTable)
-            
-            baseText<-"<b>Mismatched columns: </b>"
-            
-            if(length(comparison)==1 & any(!grepl('Component', comparison))){
-              comparison<-paste(baseText, ' None', sep = '')
-            } else{
-              #[\u201C\u201D] = curly quotes
-              comparison<-paste(baseText, paste(gsub("[\u201C\u201D]", "", str_extract(comparison, "(?<=Component )[^:]+")), collapse = ', '), sep = '')
-            }
-            tagList(
-              HTML(paste0('<div style="text-align: center;">', comparison, '</div>'))
-            )
-          } else{
-            NULL
-          }
-        })
-
-        
-        #MGP output
-        output$mgTable<-renderUI({
-          
-          run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
-          mgp$result<-run_res[[1]]
-          df<-run_res[[2]]
-          mgp$missing_seq<-run_res[[3]]
-          mgp$fail_message<-run_res[[4]]
-          
-          
-          if(mgp$result){
-            
-            mgp$A_mm<-run_res[[5]]
-            mgp$B_mm<-run_res[[6]]
-            mgp$C_mm<-run_res[[7]]
-            mgp$DRB1_mm<-run_res[[8]]
-            mgp$DRB345_mm<-run_res[[9]]
-            mgp$DQA1_mm<-run_res[[10]]
-            mgp$DQB1_mm<-run_res[[11]]
-            mgp$DPA1_mm<-run_res[[12]]
-            mgp$DPB1_mm<-run_res[[13]]
-            
-            mgp$mgpTable<-df %>%
-              replace(is.na(.), '') %>%
-              relocate(ABCDRDQ_match, .before = ABCDRDQ_alleles) %>%
-              relocate(ABCDRB1_match, .before = ABCDRB1_alleles) %>%
-              relocate(DRB345DQDP_match, .before= DRB345DQDP_alleles) %>%
-              relocate(Seven_loci_alleles, .before= seven_loci_match)
-            
-            hide_spinner()
-
-            if(!is.null(mgp$missing_seq)){
-              showModal(missingModal(mgp$missing_seq))
-            }
-            
-            tagList(
-              hr(),
-              h3('MGP Results', style = "text-align: center; font-weight: bold;"),
-              DT::renderDT(mgp$mgpTable, options = list(dom = 't', scrollX = TRUE, ordering = FALSE), rownames = FALSE),
-              br())
-          } else{
-            message<-'Match Grade evaluations for recipient ITL %s %s'
-            if(!is.null(mgp$fail_message)){
-              #no IgG tests selected error
-              if(!grepl('NMDP', mgp$fail_message)){
-                message<-paste(message, mgp$fail_message, sep = '')
-                lgr$info(sprintf(message, patient, 'failed. '))
-                uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
-              } else{
-                #NMDP code not found error
-                message<-paste(message, mgp$fail_message, ' Please e-mail %s to update the NMDP reference file.', sep = '')
-                lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
-                uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.<br><br>', '<b>livtran@stanford.edu</b>'))
-              }
-            } else{
-              message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
-              lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
-              uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
-            }
-            lgr$info('**********MATCH GRADE EVALUATION END**********')
-            hide_spinner()
-            uiOutMess
-          }
-        })
         
         #MG DB
         output$mgPopulationTable<-renderUI({
@@ -256,6 +211,39 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
             NULL
           }
         })
+        
+        #DSA messaging 
+        output$dsaMess<-renderUI({
+          req(mgp$result)
+          
+          if(mgp$result == 'TRUE'){
+            if(nrow(mgp$dsainfo)!=0){
+              
+              dsaTable<-DT::renderDT(mgp$dsainfo, options = list(dom = 't', scrollX = TRUE, ordering = FALSE,  columnDefs = list(
+                list(targets = "_all", className = "dt-center")
+              )), rownames = FALSE)
+              
+              #output at top; needs separation line after
+              if(creds == '30'){
+                tagOut<-tagList(
+                  h3('DSA', style = 'font-weight:bold; text-align:center; margin-top: 1px;'),
+                  dsaTable,
+                  hr()
+                )
+              } else{
+                tagOut<-tagList(
+                  hr(),
+                  h3('DSA', style = 'font-weight:bold; text-align:center; margin-top: 1px;'),
+                  dsaTable,
+                )
+              }
+              tagOut
+            } else{
+              NULL
+            }
+          }
+        })
+        
       })
 
       #download log client
