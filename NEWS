@@ -1,3 +1,12 @@
+MGP v 1.12.1 2/4/25
+-------------------
+  * added logic to filter out the following alleles if the antigen group is used
+  as a surrogate, since these alleles are serologically distinct
+    A2: A*02:03, A*02:10
+    A24: A*24:03
+    B35: B*35:12, B*35:02
+    Cw16: C*16:02
+    
 MGP v 1.12.0 2/3/25
 -------------------
   * fixed issue with incorrect DSA calling for class II 
