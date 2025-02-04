@@ -1,4 +1,4 @@
-#v 1.10.0
+#v 1.12.0
 
 options(warn = 2) 
 
@@ -54,10 +54,10 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
             unlist()
           
           #split any haplotypes into separate alleles
-          positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
+          #positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
           
           mfi_vals<-getMFIvals(con, r_itl, testNums)
-          
+
           #if value is blank for average value, all beads in that antigen group have
           #reactivity 0; make blanks and NA 0 
           mfi_vals<-mfi_vals %>%
@@ -65,63 +65,37 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
                                              .default = as.numeric(average_value)))
           
           mfi_vals$average_value[which(is.na(mfi_vals$average_value))]<-0
+          
+          #filter out Bw4, Bw6
+          #if DP or DQ, only keep heterodimers 
+          mfi_vals<-mfi_vals %>%
+            filter(!antigen %in% c('Bw4', 'Bw6')) %>% 
+            filter(!is.na(allele) & allele != '') %>%
+            filter(!is.na(antigen)) %>%
+            filter(case_when(grepl('DP|DQ', antigen)~grepl(',', probe_id),
+                             TRUE ~ TRUE))
         }
-        
       }
 
       lgr$info(paste('*****Calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
-      #load NMDP file if there are any NMDP codes present in the donor typing data
-      #nmdpCheck<-donor_hla %>%
-      #  select(c(A, B, C, DPA1, DPB1, DQA1, DQB1, DRB1, DRB)) %>%
-        #check if character directly after the colon is a letter
-      #  mutate_all(~grepl(':[A-WYZ]', .))
-      
-      #if(any(nmdpCheck)){
-      #  nmdp_file<<-loadNMDP()
-      #  lgr$info('NMDP typing detected. NMDP conversion file loaded.')
-      #}
       
       ##### MATCH EVALUATIONS #####
       
       lgr$info('Donor typing extracted')
       lgr$info('Assessing A, B, and C...')
-
       ABC<-calcABCDRB('ABC', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
-      if(!is.list(ABC)){
-        errorMessage<-ABC
-        stop('An NMDP allele in the ABC category not found in the NMDP reference file')
-      }
       lgr$info('Finished assessing A, B, and C!')
       lgr$info('Assessing DRB1...')
-
       DRB1<-calcABCDRB('DRB1', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
-      if(!is.list(DRB1)){
-        errorMessage<-DRB1
-        stop('An NMDP allele for DRB1 was not found in the NMDP reference file')
-      }
       lgr$info('Finished assessing DRB1!')
-      
       lgr$info('Assessing DRB3/4/5...')
       DRB345<-calcABCDRB('DRB', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
-      if(!is.list(DRB345)){
-        errorMessage<-DRB345
-        stop('An NMDP allele for DRB345 was not found in the NMDP reference file')
-      }
       lgr$info('Finished assessing DRB3/4/5!')
       lgr$info('Assessing DP...')
       DP<-calcDQDP('DP', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
-      if(!is.list(DP)){
-        errorMessage<-DP
-        stop('An NMDP allele for DP was not found in the NMDP reference file')
-      }
-      
       lgr$info('Finished assessing DP!')
       lgr$info('Assessing DQ...')
       DQ<-calcDQDP('DQ', donor_hla, recip_hla, synnonsynList, d_filter, r_filter)
-      if(!is.list(DQ)){
-        errorMessage<-DQ
-        stop('An NMDP allele for DQ was not found in the NMDP reference file')
-      }
       lgr$info('Finished assessing DQ!')
       
       #ABC-DR-DQ
@@ -139,7 +113,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       ABCDRB1<-ABC[[1]]+DRB1[[1]]
       
       #print(ABCDRB1)
-      
       #DRB3/4/5-DQ-DP
       #match, total, mm gvh, mm hvg
       if(sum(DRB345[[1]])==0 & sum(DQ[[1]])==0 & sum(DP[[1]])==0){
@@ -161,7 +134,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
         allLoci<-c(ABCDRB1[1] + DRB345DQDP[1], ABCDRB1[2] + DRB345DQDP[2])
       }
       
-      print(allLoci)
+      #print(allLoci)
       
       #disable this for real values while testing
       if(credentials == '30'){
@@ -188,9 +161,8 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       
       ##### TCE EVALUATIONS #####
       lgr$info('Assessing TCE permissibility...')
-      tce<-getTCE(donor_hla, recip_hla, DP[[5]])
-      
-      print(tce)
+      tce<-getTCE(donor_hla, recip_hla)
+
       if(!is.null(tce)){
         if(credentials == '30'){
           lgr$info('Finished assessing TCE permissibility!')
@@ -216,11 +188,15 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       
       lgr$info('Evaluating DSA...')
       if(calculateDSA == TRUE){
-        DSA<-calcDSA(con, hvg_mm_alleles_eval, positive_antigens, mfi_vals)
+        DSAresults<-calcDSA(con, hvg_mm_alleles_eval, positive_antigens, mfi_vals, unlist(donor_hla, use.names = F), unlist(recip_hla, use.names = F))
+        DSA<-DSAresults[[1]]
+        DSAmessage<-DSAresults[[2]]
       } else if(calculateDSA == FALSE){
         DSA<-'N'
+        DSAmessage<-data.frame()
       } else if (calculateDSA == 'Unknown'){
         DSA<-'U'
+        DSAmessage<-data.frame()
       }
       
       lgr$info(paste('DSA:', DSA))
@@ -275,7 +251,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
 
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       
-      return(list('TRUE', d_mg[c(36:49)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm))
+      return(list('TRUE', d_mg[c(36:49)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm, DSAmessage))
       
     },
     error = function(e){

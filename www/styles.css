@@ -52,7 +52,8 @@ hr {
     font-size: 20px;
     overflow-y: auto;
     min-height: 200px;
-    max-height: 400px;
+    max-height: 800px;
+    padding-left: 20px;
 }
 
 .shinybusy-busy {

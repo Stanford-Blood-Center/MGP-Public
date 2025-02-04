@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.11.0</b></i></h6>
+    <h6><i><b>Version 1.12.0</b></i></h6>
     <br>
 
     <div class='instruction'>
@@ -40,7 +40,8 @@ getInstructions<-function(){
 
     <div class='instruction'>
         <b>4)</b> Click on the 'Run MGP' button to begin evaluation. A red, busy spinner will appear in the main panel
-        while the program is running. If there are no errors and the run was successful, a screen highlighting allele specific mismatches by locus will appear. 
+        while the program is running. If there are no errors and the run was successful, the main panel will populate with allele specific mismatches by locus.
+        If DSAs were captured, the DSA and their MFI range(s) will also appear on the main panel.
         Results will be available for review in the Match Grade application. If the job failed, an error message will appear.
     </div>
     

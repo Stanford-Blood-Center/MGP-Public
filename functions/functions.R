@@ -1,5 +1,5 @@
 #external functions
-#v 1.11.0
+#v 1.12.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -230,7 +230,7 @@ convertNMDP<-function(n_allele){
   f2<-sapply(strsplit(n_allele, ':'), '[[', 2) 
   
   donor_st<-sapply(f1, function(x) NULL)
-  browser()
+  
   subtypes<-GET(
     url=sprintf('https://hml.nmdp.org/mac/api/codes/%s', f2), 
     add_headers(Accept = 'text/plain')
@@ -300,7 +300,7 @@ updateMGtable<-function(connection, type, vals){
 }
 
 #get TCE permissibility for TCE
-getTCE<-function(d_hla, r_hla, samePGroup){
+getTCE<-function(d_hla, r_hla){
   
   d_dpb<-d_hla %>%
     select(DPB1) %>%
@@ -326,16 +326,58 @@ getTCE<-function(d_hla, r_hla, samePGroup){
   legend<-list('Non-Permissive'='N', 'Permissive'='P','Unknown'='U')
   
   #get differences between recipient DP alleles and donor DP alleles
-  dpDiff<-union(setdiff(r_dpb, d_dpb), setdiff(d_dpb, r_dpb))
+  rDPdiff<-setdiff(r_dpb, d_dpb)
+  dDPdiff<-setdiff(d_dpb, r_dpb)
   
-  #if there are DP differences in alleles, check to see if any DP alleles
-  #had the same p group
-  #if yes, filter them out
+  dpDiff<-union(rDPdiff, dDPdiff)
+  
   if(length(dpDiff)!=0){
-    if(length(samePGroup)!=0){
-      samePGroup<-sub(".*\\*", "", samePGroup)
-      dpDiff<-setdiff(dpDiff, samePGroup)
+    
+    DPalignment<-alignments[['DPB1']]
+    removeDiff <- c()
+    
+    #evaluate if mismatched donor alleles have the same p group as the recip alleles
+    recipAlignments<-DPalignment %>%
+      filter(trimmed_allele %in% c(paste('DPB1*', r_dpb, sep = ''))) %>%
+      distinct(trimmed_allele, .keep_all = TRUE) %>%
+      select(c(trimmed_allele,as.character(seq(1, 90)))) %>%
+      unite(.,'all', -trimmed_allele, sep='')
+    
+    for(d in dDPdiff){
+        donorEvalAlignments<-DPalignment %>%
+          filter(trimmed_allele == paste('DPB1*', d, sep = '')) %>%
+          slice(1) %>%
+          select(as.character(seq(1, 90))) %>%
+          paste(collapse = "")
+        
+        if(any(donorEvalAlignments == recipAlignments$all)){
+          d_samePGroup<-paste(recipAlignments$trimmed_allele[donorEvalAlignments == recipAlignments$all], collapse = ', ')
+          lgr$info(sprintf('Donor - %s removed from mismatched DPs as it has the same P-group as the following recipient alleles: %s', paste(paste('DPB1*', d, sep =''), collapse = ','), d_samePGroup))
+          removeDiff<-append(removeDiff, d)
+        }
     }
+    
+    #evaluate if mismatched recip alleles have the same p group as the donor alleles
+    donorAlignments<-DPalignment %>%
+      filter(trimmed_allele %in% c(paste('DPB1*', d_dpb, sep = ''))) %>%
+      distinct(trimmed_allele, .keep_all = TRUE) %>%
+      select(c(trimmed_allele,as.character(seq(1, 90)))) %>%
+      unite(.,'all', -trimmed_allele, sep='')
+    
+    for(r in rDPdiff){
+      recipEvalAlignments<-DPalignment %>%
+        filter(trimmed_allele == paste('DPB1*', r, sep = '')) %>%
+        slice(1) %>%
+        select(as.character(seq(1, 90))) %>%
+        paste(collapse = "")
+      
+      if(any(recipEvalAlignments == donorAlignments$all)){
+        r_samePGroup<-paste(donorAlignments$trimmed_allele[recipEvalAlignments == donorAlignments$all], collapse = ', ')
+        lgr$info(sprintf('Recipient - %s removed from mismatched DPs as it has the same P-group as the following donor alleles: %s', paste(paste('DPB1*', r, sep =''), collapse = ','), r_samePGroup))
+        removeDiff<-append(removeDiff, r)
+      }
+    }
+    dpDiff<-dpDiff[!dpDiff %in% removeDiff]
   }
   
   if(length(dpDiff)==0){
@@ -797,7 +839,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     if(any(grepl('@', d_alleles))){
       d_alleles<-processNovelAlleles(d_alleles, synqList)
     }
-    
+
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
@@ -813,8 +855,6 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     
     missing_message<-c()
     gvh_alleles<-sapply(group, function(x) c())
-    
-    DP_same_Pgroup<-NULL
     
     ##GvH calculation
     for(i in r_mm_alleles){
@@ -854,12 +894,6 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
         
         if(!reg_flag){
           filter<-d_gvh_prot$trimmed_allele[r_gvh_prot == d_gvh_prot$all]
-          lgr$info(paste(i, ' and ', filter, ' have the same P-group', sep = ''))
-          #add to return DP if any have the same P group during TCE evaluation
-          if(cat == 'DP'){
-            DP_same_Pgroup<-append(DP_same_Pgroup, c(i, filter))
-          }
-          
           d_mm_alleles<-d_mm_alleles[!d_mm_alleles %in% filter]
         }
       }
@@ -921,7 +955,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
           hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
           lgr$info(paste('HvG MM-', j, sep = ''))
-        }
+        } 
       }
     }
     
@@ -930,7 +964,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     
     matches<-total-max(gvh_total, hvg_total)
     
-    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, gvh_alleles, missing_message, DP_same_Pgroup))
+    return(list(c(matches, total, gvh_total, hvg_total), hvg_alleles, gvh_alleles, missing_message))
   }
 }
 
@@ -1014,20 +1048,37 @@ getC2RefAlleles<-function(){
 
 
 #calculate if DSA is Y or N
-calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
+calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donorTyping, recipTyping){
   
   call_dsa<-'N'
-  nmdp_allele<-NULL
+  
+  dsaDF<-data.frame(
+    allele = character(), 
+    surrogate = character(), 
+    alleles = character(), 
+    mfi = character()
+  )
   
   #DSA = No if no mismatched alleles or called_antibodies = Negative
   if(length(mismatched_alleles)==0 | any(called_antibodies == 'Negative')){
-    return(call_dsa)
+    return(list(call_dsa, dsaDF))
   }
   
-  mfi_vals<-mfi_vals %>%
-    filter(!antigen %in% c('Bw4', 'Bw6'))
+  called_antibodies<-addCalledABs(called_antibodies)
+  
+  #create vector for mismatched_alleles in case there are surrogates used for C2
+  #surrogate alleles need to be appended to mismatched alleles while evaluating
+  #if both subunits are present in heterodimers 
+  mmAllelesAppend<-donorTyping
   
   for(t in mismatched_alleles){
+
+    surrogate<-NA
+    nmdp_allele<-NULL
+    
+    lgr$info(sprintf('Evaluating mismatched allele %s...', t))
+    
+    heterodimerSurrogate = FALSE 
     
     #if any novel alleles, 
     if(grepl('@', t)){
@@ -1054,15 +1105,27 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
       t<-paste(locus, convertedAllele[[1]], sep='*')
     }
     
-    allele_mfi<-mfi_vals %>%
-      filter(allele %in% t) %>%
-      distinct(allele, .keep_all = T)
-    
+    #if heterodimer locus, find alleles that contain the mismatched allele
+    if(locus %in% c('DPA1', 'DPB1', 'DQA1', 'DQB1')){
+      allele_mfi<-mfi_vals %>%
+        filter(grepl(t, allele, fixed = TRUE)) %>%
+        filter(grepl(',', allele))
+
+    } else{
+      allele_mfi<-mfi_vals %>%
+        filter(allele %in% t) %>%
+        distinct(allele, .keep_all = T)
+    }
+
     #if allele is not tested by ab screening and is A, B, C, DRB1, DRB3/4/5, use 
     #antigen table to find serological equivalent
     if(nrow(allele_mfi)==0 & locus %in% c('A', 'B', 'C', 'DRB1', 'DRB3', 'DRB4', 'DRB5', 'DQB1')){
       
       lgr$info(sprintf('Using a serological surrogate for %s', paste(t, collapse = ', ')))
+      
+      if(locus == 'DQB1'){
+        heterodimerSurrogate = TRUE
+      }
       
       surrogate<-antigen_ref %>%
         filter(antigen_name == t) %>%
@@ -1072,7 +1135,10 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
       
       if(length(surrogate)==0){
         lgr$info(sprintf('No surrogate found for %s', t))
+        surrogate<-NA
         next
+      } else {
+        lgr$info(sprintf('Surrogate used: %s', surrogate))
       }
       
       allele_mfi<-mfi_vals %>%
@@ -1080,6 +1146,8 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
     } 
     
     if(nrow(allele_mfi)==0 & locus %in% c('DQA1', 'DPA1', 'DPB1')){
+      
+      heterodimerSurrogate = TRUE
       
       lgr$info(sprintf('Using a serological surrogate for %s', paste(t, collapse = ', ')))
       
@@ -1120,6 +1188,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
             }
           } else{
             lgr$info(sprintf('No surrogate found for %s', t))
+            surrogate<-NA
             next
           }
         } else{
@@ -1137,10 +1206,13 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
               filter(grepl(surrogate, allele))
           } else{
             lgr$info(sprintf('No surrogate found for %s', t))
+            surrogate<-NA
             next
           }
         }
       }
+      
+      lgr$info(sprintf('Surrogate used: %s', gsub('\\\\', '', surrogate)))
     }
     
     #evaluate if allele(alleles if there are multiple serological surrogates) 
@@ -1148,34 +1220,104 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals){
     mfi_eval<-allele_mfi %>%
       mutate(bool=average_value>2000) 
     
-    mfi_bool<-mfi_eval%>%
-      filter(!is.na(allele)) %>%
-      pull(bool)
-    
-    #A*02:03 is called differently than A2
-    if('A203' %in% called_antibodies){
-      called_antibodies<-append(called_antibodies, 'A*02:03')
+    #if DQ or DP, check if both subunits are present in the donor's phenotype
+    if(locus %in% c('DQA1', 'DQB1', 'DPA1', 'DPB1')){
+
+      possibleDSA<-mfi_eval %>%
+        filter(bool == TRUE) %>%
+        pull(allele)
+      
+      #if a heterodimer surrogate was used, add subunits to the donor's phenotype
+      if(heterodimerSurrogate){
+        #beta
+        if(grepl('B', locus)){ 
+          mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 2))))
+        } else{
+          #alpha
+          mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 1))))
+        }
+      }
+      
+      if(length(possibleDSA) != 0){
+        for(i in 1:length(possibleDSA)){
+          heterodimerSplit<-strsplit(possibleDSA[[i]], ',')[[1]]
+          
+          #check if both subunits are present in donor's phenotype; if not, remove 
+          #from list
+          if(!all(heterodimerSplit %in% mmAllelesAppend)){
+            mfi_eval<-mfi_eval %>%
+              filter(allele != possibleDSA[[i]])
+          }
+        } 
+      }
     }
     
-    if(any(mfi_bool)){
+    mfi_bool<-mfi_eval%>%
+      filter(!is.na(allele)) %>%
+      filter(bool == TRUE)
+    
+    if(any(mfi_bool$bool)){ 
       if(!is.null(nmdp_allele)){
         t<-nmdp_allele  
       }
       #check if antigen with MFI > 2000 is in called_antibodies list
       #for surrogates, there can be multiple probe_ids
-      if(unique(mfi_eval$antigen) %in% called_antibodies | any(mfi_eval$probe_id %in% called_antibodies)){
+      if(any(unique(mfi_eval$antigen) %in% called_antibodies) | any(mfi_eval$probe_id %in% called_antibodies)){
+      
         call_dsa<-'Y'
-        lgr$info(sprintf('Calling DSA Y due to %s', t))
-        #if DSA = Y, break out of loop
-        break
+        
+        if(nrow(mfi_bool)>1){
+          mfi_value<-sprintf('%s to %s',min(mfi_bool$average_value),max(mfi_bool$average_value))
+        } else{
+          mfi_value<-mfi_bool$average_value
+        }
+        
+        mfi_mess<-sprintf('%s (MFI = %s)', t, mfi_value)
+        lgr$info(paste('DSA = Y due to ', mfi_mess, sep=''))
+       
+        dsaDF<-rbind(dsaDF, data.frame(allele = t, surrogate = surrogate, alleles = paste(mfi_bool$allele, collapse = ', '), mfi = mfi_value))
+        
       } else{
+        #may need to modify later due to mm allele not being found in positive abs
+        #due to alpha, beta, or combo asp
         lgr$info(sprintf('False positive reported for %s ', t))
         call_dsa<-'N'
+      }
+      
+      if(call_dsa == 'N'){
+        lgr$info(paste('DSA = N'))
       }
     }
   }
   
-  return(call_dsa)
+  return(list(call_dsa, dsaDF))
+}
+
+
+#these beads are called different; add in the unnabbreviated bead name for these
+#instances
+addCalledABs<-function(abs){
+  
+  abDict<- list(
+    'A203' = 'A*02:03',
+    'A210' = 'A*02:10',
+    'A2403' = 'A*24:03',
+    'B*2708' = 'B*27:08',
+    'DR1403' = 'DRB1*14:03',
+    'DR1404' = 'DRB1*14:04',
+    'DPB1*02:01' = 'DPA1*01:03,DPB1*02:01',
+    'DPB1*02:02' = 'DPA1*01:03,DPB1*02:02',
+    'DPB1*04:01' = 'DPA1*01:03,DPB1*04:01',
+    'DPB1*04:02' = 'DPA1*01:03,DPB1*04:02'
+  )
+  
+  matches <- intersect(names(abDict), abs)
+  
+  if(length(matches)!=0){
+    abs <- c(abs, unlist(abDict[matches]))
+  }
+
+  return(abs)
 }
 
 #determine if mutation for novel position is in antigen recognition domain 
