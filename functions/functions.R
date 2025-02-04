@@ -1116,7 +1116,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
         filter(allele %in% t) %>%
         distinct(allele, .keep_all = T)
     }
-
+    
     #if allele is not tested by ab screening and is A, B, C, DRB1, DRB3/4/5, use 
     #antigen table to find serological equivalent
     if(nrow(allele_mfi)==0 & locus %in% c('A', 'B', 'C', 'DRB1', 'DRB3', 'DRB4', 'DRB5', 'DQB1')){
@@ -1143,6 +1143,23 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       
       allele_mfi<-mfi_vals %>%
         filter(antigen == surrogate)
+      
+      #alleles in this category should not be used as surrogates for their respective
+      #antigen groups because they are serologically distinct
+      #filter these alleles out
+      if(surrogate %in% c('A2', 'A24', 'B35', 'Cw16')){
+        
+        filter_map <- list(
+          "A2" = c('A*02:03', 'A*02:10'),
+          "A24" = c('A*24:03'),
+          "B35" = c('B*35:12', 'B*35:02'),
+          "Cw16" = c('C*16:02')
+        )
+
+        if (surrogate %in% names(filter_map)) {
+          allele_mfi <- allele_mfi %>% filter(!allele %in% filter_map[[surrogate]])
+        }
+      }
     } 
     
     if(nrow(allele_mfi)==0 & locus %in% c('DQA1', 'DPA1', 'DPB1')){
