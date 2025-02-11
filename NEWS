@@ -1,3 +1,16 @@
+MGP v 1.12.2 2/11/25
+-------------------
+  * revised surrogate logic to rely on sero tables converted from KO's sero 
+  conversion tables -- see workflow for more details
+  * added new sero tables for HLA-A, B, C, DRB1/3/4/5, and DQB1 (v 3.58.0)
+  * updated sero tables for HLA-DPA1, DPB1, and DQA1 (v 3.58.0)
+  * added 'P' suffix variant to sub out for DSA anlysis if being evaluated 
+  * added logic to accommodate DRB3 and DRB5 serological equivalencies with 
+  proposed nomenclature
+  * took out adding recipient null alleles to DSA determination
+  * in TCE eval - if recipient and/or donor has a NULL variant allele, replace it
+  with the non-NULL allele
+  
 MGP v 1.12.1 2/4/25
 -------------------
   * added logic to filter out the following alleles if the antigen group is used
@@ -5,6 +18,7 @@ MGP v 1.12.1 2/4/25
     A2: A*02:03, A*02:10
     A24: A*24:03
     B35: B*35:12, B*35:02
+    B62: B*15:24
     Cw16: C*16:02
     
 MGP v 1.12.0 2/3/25

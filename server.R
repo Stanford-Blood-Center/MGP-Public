@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.12.0
+#v1.12.2
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -183,6 +183,12 @@ server <- function(input, output, session) {
     sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
     lgr$info(paste('SUNetID: ', sunetID, sep = ''))
     
+    if(username$creds == '30'){
+      lgr$info('***** CALCULATION MODE *****')
+    } else if(username$creds %in% c('50', '60')){
+      lgr$info('***** REVIEW MODE *****')
+    }
+    
     lgr$info('Extracting Match Grade data...')
     mg<-getMatchGrade(con, patient$itl)
     r_mg<-mg %>%
@@ -191,7 +197,6 @@ server <- function(input, output, session) {
     lgr$info('Extracting recipient typing...')
     recip_Typing<-getTyping(con, r_mg, type = 'r')
     hla$recip<-recip_Typing[[1]]
-    hla$recipNull<-recip_Typing[[2]]
     recip_novel_alleles<- recip_Typing[[3]]
     hla$filter_recip<-recip_Typing[[4]]
     
@@ -227,7 +232,7 @@ server <- function(input, output, session) {
         executeMGPUI(module_id, 'log')
       })
       
-      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log, hla$filter_donor, hla$filter_recip)
+      executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$donor, novel$selection_syn, hla$dMG, hla$log, hla$filter_donor, hla$filter_recip)
     
       }
   })
@@ -247,7 +252,7 @@ server <- function(input, output, session) {
       executeMGPUI(module_id, 'log')
     })
     
-    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, hla$recip, hla$recipNull, hla$donor, novel$selection_syn, hla$dMG, hla$log)
+    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, hla$recip, hla$donor, novel$selection_syn, hla$dMG, hla$log)
 
   })
   
