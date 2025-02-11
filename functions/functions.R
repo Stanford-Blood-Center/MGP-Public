@@ -1,5 +1,5 @@
 #external functions
-#v 1.12.0
+#v 1.12.2
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -29,16 +29,6 @@ getMatchGrade<-function(con, r_itl){
   return(mg_res)
 }
 
-#load NMDP file downloaded from https://hml.nmdp.org/MacUI/
-#in the future, find a way to automate downloading new releases of the NMDP file 
-#and updating the version in /ref 
-loadNMDP<-function(){
-  
-  nmdp_file<-readRDS(list.files('ref', pattern = 'nmdp', full.names = T))
-  
-  return(nmdp_file)
-}
-
 #extract available donors for evaluation
 getDonors<-function(mg_df){
   donors <- mg_df %>%
@@ -56,11 +46,11 @@ getTyping<-function(con, mgDF, type){
   alignments<<-readRDS('ref/alignments.rda')
   
   hla_cols <- sort(do.call(paste, c(expand.grid(c('a', 'b', 'c', 'dr', 'drp', 'dqa', 'dqb', 'dpa', 'dpb'), c(1,2)), sep = '_')))
-    
+  
   if(type == 'r'){
     prefix <- 'Recipient'
   } else{
-      prefix <- 'Donor'
+    prefix <- 'Donor'
   }
   
   t_df <- mgDF %>%
@@ -102,9 +92,9 @@ getTyping<-function(con, mgDF, type){
   null_alleles<-t_df %>%
     select(where(~any(str_sub(., -1) == 'N' & !is.na(.) & str_count(., '[[:alpha:]]') == 1))) %>%
     names()
-
+  
   filter<-c()
-
+  
   for(a in null_alleles){
     getNullAllele<-t_df %>% 
       select(all_of(a)) %>%
@@ -126,7 +116,7 @@ getTyping<-function(con, mgDF, type){
   
   if(type == 'r'){
     prefix <- 'Recipient'
-
+    
     if(length(null_alleles)!=0){
       for(i in 1:length(null_alleles)){
         if(null_alleles[[i]] == 'DRB'){
@@ -138,7 +128,7 @@ getTyping<-function(con, mgDF, type){
       }
     }
   } else{
-      prefix <- 'Donor'
+    prefix <- 'Donor'
   }
   
   #if a locus has heterozygous alleles and does not have NMDP alleles, 
@@ -146,9 +136,9 @@ getTyping<-function(con, mgDF, type){
   #skip NMDP, NAs, and novel alleles (denoted by @ suffix)
   residue<-NULL
   novelAllelesAll<-c()
-
+  
   for(j in colnames(t_df)){
-
+    
     if(any(grepl('@', t_df[,j]))){
       if(j == 'DRB'){
         delimit <- ''
@@ -249,9 +239,9 @@ convertNMDP<-function(n_allele){
   } else{
     donor_st<-subtype
   }
-
+  
   return(unlist(donor_st, use.names=F))
-
+  
 }
 
 #update dbo.Match_grades table with calculated values
@@ -308,7 +298,7 @@ getTCE<-function(d_hla, r_hla){
     strsplit('\\*') %>%
     map(2) %>%
     unlist()
-
+  
   
   if(all(is.na(d_dpb))){
     lgr$info('Donor has no DPB1 alleles to assess')
@@ -321,8 +311,14 @@ getTCE<-function(d_hla, r_hla){
     strsplit('\\*') %>%
     map(2) %>%
     unlist()
-
   
+  #replace any null variants with the non-null DPB variant
+  if(any(grepl('N', r_dpb))){
+    r_dpb[which(grepl('N', r_dpb))]<-r_dpb[!grepl('N', r_dpb)]
+  } else if(any(grepl('N', d_dpb))){
+    d_dpb[which(grepl('N', d_dpb))]<-d_dpb[!grepl('N', d_dpb)]
+  }
+    
   legend<-list('Non-Permissive'='N', 'Permissive'='P','Unknown'='U')
   
   #get differences between recipient DP alleles and donor DP alleles
@@ -344,17 +340,17 @@ getTCE<-function(d_hla, r_hla){
       unite(.,'all', -trimmed_allele, sep='')
     
     for(d in dDPdiff){
-        donorEvalAlignments<-DPalignment %>%
-          filter(trimmed_allele == paste('DPB1*', d, sep = '')) %>%
-          slice(1) %>%
-          select(as.character(seq(1, 90))) %>%
-          paste(collapse = "")
-        
-        if(any(donorEvalAlignments == recipAlignments$all)){
-          d_samePGroup<-paste(recipAlignments$trimmed_allele[donorEvalAlignments == recipAlignments$all], collapse = ', ')
-          lgr$info(sprintf('Donor - %s removed from mismatched DPs as it has the same P-group as the following recipient alleles: %s', paste(paste('DPB1*', d, sep =''), collapse = ','), d_samePGroup))
-          removeDiff<-append(removeDiff, d)
-        }
+      donorEvalAlignments<-DPalignment %>%
+        filter(trimmed_allele == paste('DPB1*', d, sep = '')) %>%
+        slice(1) %>%
+        select(as.character(seq(1, 90))) %>%
+        paste(collapse = "")
+      
+      if(any(donorEvalAlignments == recipAlignments$all)){
+        d_samePGroup<-paste(recipAlignments$trimmed_allele[donorEvalAlignments == recipAlignments$all], collapse = ', ')
+        lgr$info(sprintf('Donor - %s removed from mismatched DPs as it has the same P-group as the following recipient alleles: %s', paste(paste('DPB1*', d, sep =''), collapse = ','), d_samePGroup))
+        removeDiff<-append(removeDiff, d)
+      }
     }
     
     #evaluate if mismatched recip alleles have the same p group as the donor alleles
@@ -480,7 +476,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
   if(all(is.na(r_cat))){
     return(list(c(0,0,0,0), NULL, NULL, NULL))
   }
-
+  
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
   r_alleles<-na.omit(unlist(r_cat, use.names=F))
   
@@ -522,7 +518,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
-
+    
     all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
     
@@ -582,7 +578,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
       #get locus specific translated NMDP alleles
       nmdp_alleles<-names(nmdp_translated)[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)))]
       reg_alleles<-setdiff(d_locus_alleles, nmdp_alleles)
-
+      
       if(length(nmdp_alleles)!=0){
         
         nmdp_flag<-!i%in% unlist(nmdp_translated[c(nmdp_alleles)])
@@ -696,7 +692,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
       
       r_locus_alleles<-r_filtered_alleles[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', r_filtered_alleles))]
       all_r_locus_alleles<-r_alleles[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', r_alleles))]
-
+      
       if(align_locus %in% c('DRB3', 'DRB4', 'DRB5')){
         if(all(r_locus_alleles == '')){
           hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)          
@@ -720,7 +716,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
           lgr$info(paste('HvG MM-', j, sep = ''))
         }
       } else{
-
+        
         align<-alignments[[align_locus]]
         
         d_hvg_prot<-align %>%
@@ -839,7 +835,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     if(any(grepl('@', d_alleles))){
       d_alleles<-processNovelAlleles(d_alleles, synqList)
     }
-
+    
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
@@ -850,19 +846,19 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
       for(n in 1:length(nmdp_translated)){
         nmdpRes<-convertNMDP(names(nmdp_translated)[[n]])
         nmdp_translated[[n]]<-paste(gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)[[n]]), nmdpRes, sep="*")
-        }
       }
+    }
     
     missing_message<-c()
     gvh_alleles<-sapply(group, function(x) c())
     
     ##GvH calculation
     for(i in r_mm_alleles){
-    
+      
       mm_locus<-gsub('^(.*?)\\*.*$', '\\1', i)
       
       d_locus_alleles<-d_filtered_alleles[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', d_filtered_alleles))]
-
+      
       nmdp_alleles<-names(nmdp_translated)[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', names(nmdp_translated)))]
       reg_alleles<-setdiff(d_locus_alleles, nmdp_alleles)
       
@@ -1014,6 +1010,28 @@ getMFIvals<-function(con, p_itl, testNums){
                                 WHERE patient_number = %s AND
                                 test_number in (%s)', p_itl, testNums))
   
+  #replace ag with specific antigen group for distinct alleles that are called
+  #differently
+  agSpecific<- list(
+    'A*02:03' = 'A203',
+    'A*02:10' = 'A210',
+    'A*24:03' = 'A2403',
+    'B*27:08' = 'B2708',
+    'B*39:02'= 'B3902',
+    'B*40:05'= 'B4005',
+    'B*51:02' = 'B5102',
+    'DRB1*14:03' = 'DR1403',
+    'DRB1*14:04' = 'DR1404',
+    'DPA1*01:03,DPB1*02:01' = 'DPB1*02:01',
+    'DPA1*01:03,DPB1*02:02' = 'DPB1*02:02',
+    'DPA1*01:03,DPB1*04:01' = 'DPB1*04:01',
+    'DPA1*01:03,DPB1*04:02' = 'DPB1*04:02'
+  )
+
+  res<-res %>%
+    mutate(antigen = recode(allele, !!!agSpecific, .default = antigen)) %>%
+    filter(probe_id != '')
+
   return(res)
   
 }
@@ -1049,7 +1067,7 @@ getC2RefAlleles<-function(){
 
 #calculate if DSA is Y or N
 calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donorTyping, recipTyping){
-  
+
   call_dsa<-'N'
   
   dsaDF<-data.frame(
@@ -1064,19 +1082,17 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
     return(list(call_dsa, dsaDF))
   }
   
-  called_antibodies<-addCalledABs(called_antibodies)
-  
   #create vector for mismatched_alleles in case there are surrogates used for C2
   #surrogate alleles need to be appended to mismatched alleles while evaluating
   #if both subunits are present in heterodimers 
   mmAllelesAppend<-donorTyping
   
   for(t in mismatched_alleles){
-
+    
     surrogate<-NA
     nmdp_allele<-NULL
     
-    lgr$info(sprintf('Evaluating mismatched allele %s...', t))
+    lgr$info(sprintf('Evaluating HvG mismatched allele %s...', t))
     
     heterodimerSurrogate = FALSE 
     
@@ -1086,12 +1102,14 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
     }
     
     #skip if 'Q' suffix
-    if(str_sub(t, -1) =='Q' & str_count('Q', '[[:alpha:]]') == 1){
+    if(str_sub(t, -1) =='Q'){
       lgr$info(sprintf('Skipping %s for DSA analysis', t))
       next
     }
-    if(str_sub(t, -1) =='L' & str_count('Q', '[[:alpha:]]') == 1){
-      t<-gsub('L', '', t)
+    
+    #replace suffix if low expression or protein level ambiguity
+    if(grepl('L|P', str_sub(t, -1))){
+      t<-substr(t,nchar(t), nchar(t))<-''
     }
     
     locus<-gsub('^(.*?)\\*.*$', '\\1', t)
@@ -1110,152 +1128,196 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       allele_mfi<-mfi_vals %>%
         filter(grepl(t, allele, fixed = TRUE)) %>%
         filter(grepl(',', allele))
-
+      
     } else{
       allele_mfi<-mfi_vals %>%
         filter(allele %in% t) %>%
         distinct(allele, .keep_all = T)
     }
     
+    aspBeads<-keep(mfi_vals$allele, ~ !is.na(.x) & .x != "")
+    
     #if allele is not tested by ab screening and is A, B, C, DRB1, DRB3/4/5, use 
     #antigen table to find serological equivalent
-    if(nrow(allele_mfi)==0 & locus %in% c('A', 'B', 'C', 'DRB1', 'DRB3', 'DRB4', 'DRB5', 'DQB1')){
+    if(nrow(allele_mfi)==0){
       
       lgr$info(sprintf('Using a serological surrogate for %s', paste(t, collapse = ', ')))
       
-      if(locus == 'DQB1'){
-        heterodimerSurrogate = TRUE
-      }
-      
-      surrogate<-antigen_ref %>%
-        filter(antigen_name == t) %>%
-        select(sero_eq) %>% 
-        distinct() %>%
-        pull()
-      
-      if(length(surrogate)==0){
-        lgr$info(sprintf('No surrogate found for %s', t))
-        surrogate<-NA
-        next
-      } else {
-        lgr$info(sprintf('Surrogate used: %s', surrogate))
-      }
-      
-      allele_mfi<-mfi_vals %>%
-        filter(antigen == surrogate)
-      
-      #alleles in this category should not be used as surrogates for their respective
-      #antigen groups because they are serologically distinct
-      #filter these alleles out
-      if(surrogate %in% c('A2', 'A24', 'B35', 'Cw16')){
+      if(locus %in% c('A', 'B', 'C', 'DRB1', 'DRB3', 'DRB4', 'DRB5', 'DQB1')){
         
-        filter_map <- list(
-          "A2" = c('A*02:03', 'A*02:10'),
-          "A24" = c('A*24:03'),
-          "B35" = c('B*35:12', 'B*35:02'),
-          "Cw16" = c('C*16:02')
-        )
-
-        if (surrogate %in% names(filter_map)) {
-          allele_mfi <- allele_mfi %>% filter(!allele %in% filter_map[[surrogate]])
+        search<-sprintf('%s_serotype', locus)
+        if(locus %in% c('DRB1','DRB3','DRB4','DRB5')){
+          search<-sprintf('%s_serotype', 'DRB1345')
         }
-      }
-    } 
-    
-    if(nrow(allele_mfi)==0 & locus %in% c('DQA1', 'DPA1', 'DPB1')){
-      
-      heterodimerSurrogate = TRUE
-      
-      lgr$info(sprintf('Using a serological surrogate for %s', paste(t, collapse = ', ')))
-      
-      surrogate<-c2_antigen_ref %>%
-        filter(allele == t) %>%
-        select(panelbead) %>%
-        pull()
-      
-      #if bead is in DPDQ_serological_reference.xlsx, use serologically identical
-      #bead
-      if(length(surrogate)!=0){
-        allele_mfi<-mfi_vals %>%
-          filter(allele==surrogate)
-      } else{
-        #else, check Kazu's table for serotype surrogate, or direct allele surrogate
-        sero_table<-readRDS(paste('ref/', locus, '_serotype.rda', sep=''))
+        sero_table<-readRDS(list.files('ref/', pattern = search, full.names = T))
         
-        surrogate<-sero_table %>%
-          filter(Allele == t) %>%
-          select(Serotype) %>%
+        surrogateQuery<-sero_table %>%
+          filter(Allele == t)
+        
+        surrogate<-surrogateQuery %>%
+          select(Serotype) %>% 
           pull()
         
-        if(locus == 'DPB1'){
+        #if allele is not found in KO table
+        if(length(surrogate)==0){
+          lgr$info(sprintf('No surrogate found for %s', t))
+          next
+        }
+        
+        #if asp, check if the bead is tested in ab testing
+        if(grepl(':', surrogate)){
+          #if asp surrogate is not in beads, check the sero_table again to see if 
+          #the surrogate bead was used as a surrogate for a bead that is present in
+          #ab testing
+          #ie surrogate for A*02:14 is A*02:02, but we don't have A*02:02. however, A*02:02
+          #is also a surrogate for A*02:05, which we do have
+          
+          if(!surrogate %in% aspBeads){
+          
+            aspSearch<-sero_table %>%
+              filter(Serotype == surrogate) %>%
+              filter(Allele %in% aspBeads)
+            
+            #if there is still no ASP surrogate, then use the ag from the ImputedAntigen col
+            if(nrow(aspSearch)==0){
+              surrogate<-surrogateQuery %>%
+                select(ImputedAntigen) %>%
+                pull()
+              lgr$info(sprintf('Unable to find an allele specific surrogate for %s... using imputed antigen %s as surrogate', t, surrogate))
+            } 
+          
+            if(nrow(aspSearch)!=0){ 
+              surrogate<-aspSearch %>% pull(Allele)
+            } 
+          }
+        }
+        
+        #DRB35 and serotype is not antigen
+        if(locus %in% c('DRB3', 'DRB5') & grepl('DR-5', surrogate)){
+            DRmapping<-list(
+              #DRB3
+              'DR-5201' = 'DRB3*01:01',
+              'DR-5202' = c('DRB3*02:01', 'DRB3*01:02'), 
+              'DR-5203' = 'DRB3*03:01',
+              #DRB5
+              'DR-5101' = c('DRB5*01:01', 'DRB5*01:02'), 
+              'DR-5102' = 'DRB5*02:02',
+              #use ag for DR-5103 since we don't have the bead
+              'DR-5103' = 'DR51'
+            )
+            surrogate<-DRmapping[[surrogate]]
+            #in case IgG test does not include new ExPlex beads (i.e. DRB3*01:02)
+            surrogate<-surrogate[surrogate %in% aspBeads]
+        }
+        
+        #use any(grepl()), just in case multiple surrogates are found for ASP beads
+        allele_mfi<-mfi_vals %>%
+          filter(if(any(grepl(':', surrogate))) allele %in% surrogate else antigen == surrogate)
+        
+        if(length(surrogate)==0){
+          lgr$info(sprintf('No surrogate found for %s', t))
+          surrogate<-NA
+          next
+        } else {
+          lgr$info(sprintf('Surrogate used: %s', paste(surrogate, collapse = ', ')))
+        }
+        
+        #alleles in this category should not be used as surrogates for their respective
+        #antigen groups because they are serologically distinct
+        #filter these alleles out
+        if(length(surrogate) == 1){
+          if(surrogate %in% c('B35', 'B62', 'Cw16')){
+            filter_map <- list(
+              "B35" = c('B*35:12', 'B*35:02'),
+              "B62" = c('B*15:24'),
+              "Cw16" = c('C*16:02')
+            )
+            if (surrogate %in% names(filter_map)) {
+              allele_mfi <- allele_mfi %>% filter(!allele %in% filter_map[[surrogate]])
+              }
+            } 
+        }
+      } else if(locus %in% c('DQA1', 'DPA1', 'DPB1')){
+        
+        heterodimerSurrogate = TRUE
+        
+        surrogate<-c2_antigen_ref %>%
+          filter(allele == t) %>%
+          select(panelbead) %>%
+          pull()
+        
+        #if bead is in DPDQ_serological_reference.xlsx, use serologically identical
+        #bead
+        if(length(surrogate)!=0){
+          allele_mfi<-mfi_vals %>%
+            filter(allele==surrogate)
+        } else{
+          #else, check Kazu's table for serotype surrogate, or direct allele surrogate
+          sero_table<-readRDS(list.files('ref/', pattern = sprintf('%s_serotype', locus), full.names = TRUE))
+          
           surrogate<-sero_table %>%
             filter(Allele == t) %>%
             select(Serotype) %>%
-            pull() 
-          
-          if(length(surrogate)!=0){
-            #if ':' is present in surrogate, filter by allele column
-            if(grepl(':', surrogate)){
+            pull()
+         
+          if(locus == 'DPB1'){
+            if(length(surrogate)!=0){
               allele_mfi<-mfi_vals %>%
-                filter(allele==surrogate)
+                filter(antigen == surrogate)
             } else{
-              #else filter by antigen group
-              allele_mfi<-mfi_vals %>%
-                filter(antigen==surrogate)
+              lgr$info(sprintf('No surrogate found for %s', t))
+              surrogate<-NA
+              next
             }
           } else{
-            lgr$info(sprintf('No surrogate found for %s', t))
-            surrogate<-NA
-            next
-          }
-        } else{
-          #DQA1, DPA1
-          surrogate<-sero_table %>% 
-            filter(Serotype == surrogate) %>%
-            mutate(Allele = gsub('*', '\\*', Allele, fixed = TRUE)) %>%
-            pull(Allele)
-          
-          if(length(surrogate)!=0){
-            surrogate<-paste(surrogate, collapse = '|')
+            #DQA1, DPA1
+            #can't use fixed = TRUE with later grepl with '|', so have to 
+            #escape asterisks
+            surrogate<-sero_table %>% 
+              filter(Serotype == surrogate) %>%
+              mutate(Allele = gsub('*', '\\*', Allele, fixed = TRUE)) %>%
+              pull(Allele)
             
-            #get serologically equivalent alpha alleles in beads
-            allele_mfi<-mfi_vals %>%
-              filter(grepl(surrogate, allele))
-          } else{
-            lgr$info(sprintf('No surrogate found for %s', t))
-            surrogate<-NA
-            next
+            if(length(surrogate)!=0){
+              surrogate<-paste(surrogate, collapse = '|')
+              
+              #get serologically equivalent alpha alleles in beads
+              allele_mfi<-mfi_vals %>%
+                filter(grepl(surrogate, allele))
+            } else{
+              lgr$info(sprintf('No surrogate found for %s', t))
+              surrogate<-NA
+              next
+            }
           }
         }
+        lgr$info(sprintf('Surrogate used: %s', gsub('\\\\', '', surrogate)))
       }
-      
-      lgr$info(sprintf('Surrogate used: %s', gsub('\\\\', '', surrogate)))
-    }
+    }  
     
     #evaluate if allele(alleles if there are multiple serological surrogates) 
-    #have an average mfi value greater than 2000; if any do, DSA = Yes
+    #have an average mfi value greater than 2000
     mfi_eval<-allele_mfi %>%
       mutate(bool=average_value>2000) 
     
     #if DQ or DP, check if both subunits are present in the donor's phenotype
     if(locus %in% c('DQA1', 'DQB1', 'DPA1', 'DPB1')){
-
+      
       possibleDSA<-mfi_eval %>%
         filter(bool == TRUE) %>%
         pull(allele)
       
-      #if a heterodimer surrogate was used, add subunits to the donor's phenotype
-      if(heterodimerSurrogate){
-        #beta
-        if(grepl('B', locus)){ 
-          mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 2))))
-        } else{
-          #alpha
-          mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 1))))
-        }
-      }
-      
       if(length(possibleDSA) != 0){
+        #if a heterodimer surrogate was used, add subunits to the donor's phenotype
+        if(heterodimerSurrogate){
+          #beta
+          if(grepl('B', locus)){ 
+            mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 2))))
+          } else{
+            #alpha
+            mmAllelesAppend<-append(mmAllelesAppend, unique(unlist(lapply(strsplit(allele_mfi$allele, ','), '[[', 1))))
+          }
+        }
         for(i in 1:length(possibleDSA)){
           heterodimerSplit<-strsplit(possibleDSA[[i]], ',')[[1]]
           
@@ -1277,64 +1339,42 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       if(!is.null(nmdp_allele)){
         t<-nmdp_allele  
       }
+      
       #check if antigen with MFI > 2000 is in called_antibodies list
       #for surrogates, there can be multiple probe_ids
       if(any(unique(mfi_eval$antigen) %in% called_antibodies) | any(mfi_eval$probe_id %in% called_antibodies)){
-      
+        
         call_dsa<-'Y'
         
-        if(nrow(mfi_bool)>1){
-          mfi_value<-sprintf('%s to %s',min(mfi_bool$average_value),max(mfi_bool$average_value))
-        } else{
-          mfi_value<-mfi_bool$average_value
+        #if there is one or more bead > 2000 MFI
+        if(nrow(mfi_bool)>=1){
+          #if surrogate was used, multiple beads can be present; use the min and max of all bead data
+          if(nrow(mfi_eval) > 1){
+            mfi_value<-sprintf('%s to %s',min(mfi_eval$average_value),max(mfi_eval$average_value))
+          } else{
+            mfi_value<-mfi_eval$average_value
+          }
         }
         
         mfi_mess<-sprintf('%s (MFI = %s)', t, mfi_value)
         lgr$info(paste('DSA = Y due to ', mfi_mess, sep=''))
-       
+        
         dsaDF<-rbind(dsaDF, data.frame(allele = t, surrogate = surrogate, alleles = paste(mfi_bool$allele, collapse = ', '), mfi = mfi_value))
         
       } else{
         #may need to modify later due to mm allele not being found in positive abs
         #due to alpha, beta, or combo asp
         lgr$info(sprintf('False positive reported for %s ', t))
-        call_dsa<-'N'
-      }
-      
-      if(call_dsa == 'N'){
-        lgr$info(paste('DSA = N'))
+        
+        #if call_dsa is not already Y, then change to N
+        if(call_dsa != 'Y'){
+          call_dsa<-'N'
+        }
       }
     }
   }
   
   return(list(call_dsa, dsaDF))
-}
-
-
-#these beads are called different; add in the unnabbreviated bead name for these
-#instances
-addCalledABs<-function(abs){
-  
-  abDict<- list(
-    'A203' = 'A*02:03',
-    'A210' = 'A*02:10',
-    'A2403' = 'A*24:03',
-    'B*2708' = 'B*27:08',
-    'DR1403' = 'DRB1*14:03',
-    'DR1404' = 'DRB1*14:04',
-    'DPB1*02:01' = 'DPA1*01:03,DPB1*02:01',
-    'DPB1*02:02' = 'DPA1*01:03,DPB1*02:02',
-    'DPB1*04:01' = 'DPA1*01:03,DPB1*04:01',
-    'DPB1*04:02' = 'DPA1*01:03,DPB1*04:02'
-  )
-  
-  matches <- intersect(names(abDict), abs)
-  
-  if(length(matches)!=0){
-    abs <- c(abs, unlist(abDict[matches]))
-  }
-
-  return(abs)
 }
 
 #determine if mutation for novel position is in antigen recognition domain 
@@ -1359,7 +1399,7 @@ determinePosition<-function(position, locus){
 
 #process novel alleles
 processNovelAlleles<-function(novelAlleles, synqList){
-    
+  
   novel_handle<-novelAlleles[grepl('@', novelAlleles)]
   
   for(i in novel_handle){

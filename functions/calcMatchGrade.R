@@ -4,7 +4,7 @@ options(warn = 2)
 
 suppressPackageStartupMessages(library(lgr))
 
-calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele, donor_hla, synnonsynList, d_mg, d_filter, r_filter){
+calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnonsynList, d_mg, d_filter, r_filter){
   
   tryCatch(
     {
@@ -178,13 +178,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, recip_null_allele
       ##### DSA EVALUATIONS #####
       hvg_mm_alleles<-c(ABC[[2]], DRB1[[2]], DRB345[[2]], DQ[[2]], DP[[2]])
       hvg_mm_alleles_eval<-c(unlist(hvg_mm_alleles, use.names = FALSE))
-      
-      #remove N suffix and combine with hvg_mm_alleles to evaluate DSA for non-null
-      #variant
-      if(!is.null(recip_null_allele)){
-        str_sub(recip_null_allele, -1)<-''
-        hvg_mm_alleles_eval<-c(hvg_mm_alleles_eval, recip_null_allele)
-      }
       
       lgr$info('Evaluating DSA...')
       if(calculateDSA == TRUE){

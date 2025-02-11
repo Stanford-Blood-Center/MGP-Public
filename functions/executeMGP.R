@@ -14,7 +14,7 @@ executeMGPUI<- function(id, type) {
 }
 
 
-executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, log, donor_filter, recip_filter) {
+executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, syn_nonsyn, donorMatchGrade, log, donor_filter, recip_filter) {
  
    moduleServer(
      id,
@@ -42,7 +42,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaRecipient
        
        observe({
          
-         run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaRecipientNull, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
+         run_res<-isolate({calcMatchGrade(patient, donor, creds, hlaRecipient, hlaDonor, syn_nonsyn, donorMatchGrade, donor_filter, recip_filter)})
          
          mgp$result<-run_res[[1]]
          mgp$df<-run_res[[2]]
