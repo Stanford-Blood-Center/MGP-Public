@@ -1106,10 +1106,10 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       lgr$info(sprintf('Skipping %s for DSA analysis', t))
       next
     }
-    
+
     #replace suffix if low expression or protein level ambiguity
     if(grepl('L|P', str_sub(t, -1))){
-      t<-substr(t,nchar(t), nchar(t))<-''
+      t<-substr(t,1, nchar(t)-1)
     }
     
     locus<-gsub('^(.*?)\\*.*$', '\\1', t)
