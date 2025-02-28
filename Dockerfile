@@ -39,12 +39,10 @@ RUN apt-get update && apt-get install -y curl && \
 # unixodbc-dev is used by the odbc R package.
 # zlib1g-dev is used by the httpuv R package.
 # pkg-config is used since we're bringing in dev packages.
-# ACCEPT_EULA is used by msodbcsql17
-# NOTE: We avoid the driver for SQL Server 18, becaue it enables encryption by
-# default.
+# ACCEPT_EULA is used by msodbcsql18
 ARG ACCEPT_EULA=y
 RUN apt-get update && \
-  apt-get install -y libodbc2 libcurl4-openssl-dev libssl-dev libxml2-dev msodbcsql17 pkg-config unixodbc-dev zlib1g-dev && \
+  apt-get install -y libodbc2 libcurl4-openssl-dev libssl-dev libxml2-dev msodbcsql18 pkg-config unixodbc-dev zlib1g-dev && \
 	apt-get clean && rm -rf /tmp/*
 
 # Copy all of the files into the container's scripts directory, and set that to
@@ -54,7 +52,7 @@ WORKDIR /usr/local/src/myscripts
 
 # The current codebase uses the ODBC driver named "SQL Server".
 # Change that to the driver we have installed.
-RUN sed -i -e 's|SQL Server|ODBC Driver 17 for SQL Server|' \
+RUN sed -i -e 's|SQL Server|ODBC Driver 18 for SQL Server|' \
   /usr/local/src/myscripts/functions/functions.R
 
 # Install renv, so that we can import the environment.
