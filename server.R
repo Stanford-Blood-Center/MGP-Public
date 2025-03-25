@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.12.2
+#v1.12.3
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -231,7 +231,6 @@ server <- function(input, output, session) {
       output$sideLog <- renderUI({
         executeMGPUI(module_id, 'log')
       })
-      
       executeMGPServer(module_id, username$creds, patient$itl, donor$selection, hla$recip, hla$donor, novel$selection_syn, hla$dMG, hla$log, hla$filter_donor, hla$filter_recip)
     
       }
@@ -252,7 +251,7 @@ server <- function(input, output, session) {
       executeMGPUI(module_id, 'log')
     })
     
-    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, hla$recip, hla$donor, novel$selection_syn, hla$dMG, hla$log)
+    executeMGPServer(module_id, username$creds, input$p_itl, donor$selection, hla$recip, hla$donor, novel$selection_syn, hla$dMG, hla$log, hla$filter_donor, hla$filter_recip)
 
   })
   
