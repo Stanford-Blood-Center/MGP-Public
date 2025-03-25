@@ -1,5 +1,5 @@
 #external functions
-#v 1.12.2
+#v 1.12.3
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -519,7 +519,7 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
-    all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
+    all_nmdp_alleles<-d_mm_alleles[isNMDP(d_mm_alleles)]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
     
     if(length(nmdp_translated)!=0){
@@ -707,9 +707,9 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
           next
         }
       }
-      
+     
       #use all recipient alleles for evaluating NMDP codes
-      if(grepl('[A-Z]', substr(gsub('.*?:', "", j), 1,1))){
+      if(isNMDP(j)){
         if(!any(nmdp_translated[[j]] %in% all_r_locus_alleles)){
           hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
@@ -839,7 +839,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
-    all_nmdp_alleles<-d_mm_alleles[grepl('[A-Z]', substr(gsub('.*?:', "", d_mm_alleles), 1,1))]
+    all_nmdp_alleles<-d_mm_alleles[isNMDP(d_mm_alleles)]
     nmdp_translated<-sapply(all_nmdp_alleles, function(x) NULL)
     
     if(length(nmdp_translated)!=0){
@@ -919,7 +919,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
       r_locus_alleles<-r_filtered_alleles[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', r_filtered_alleles))]
       all_r_locus_alleles<-r_alleles[grepl(mm_locus,gsub('^(.*?)\\*.*$', '\\1', r_alleles))]
       
-      if(grepl('[A-Z]', substr(gsub('.*?:', "", j), 1,1))){
+      if(isNMDP(j)){
         if(!any(nmdp_translated[[j]] %in% all_r_locus_alleles)){
           hvg_alleles[[mm_locus]]<-append(hvg_alleles[[mm_locus]], j)
           hvg[[mm_locus]]<-hvg[[mm_locus]]+1
@@ -1064,6 +1064,11 @@ getC2RefAlleles<-function(){
   return(c2_sero_alleles)
 }
 
+#determine if allele is NMDP
+isNMDP<-function(allele){
+  return(grepl('[A-Z]', substr(gsub('.*?:', "", allele), 1,1)))
+  
+}
 
 #calculate if DSA is Y or N
 calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donorTyping, recipTyping){
@@ -1101,21 +1106,21 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       t<-gsub('@', '', t)
     }
     
-    #skip if 'Q' suffix
-    if(str_sub(t, -1) =='Q'){
+    #skip if 'Q' suffix and not NMDP allele 
+    if(str_sub(t, -1) =='Q' & !isNMDP(t)){
       lgr$info(sprintf('Skipping %s for DSA analysis', t))
       next
     }
 
     #replace suffix if low expression or protein level ambiguity
-    if(grepl('L|P', str_sub(t, -1))){
+    if(grepl('L|P', str_sub(t, -1)) & !isNMDP(t)){
       t<-substr(t,1, nchar(t)-1)
     }
     
     locus<-gsub('^(.*?)\\*.*$', '\\1', t)
     
     #nmdp conversion; change iterator to subtype values
-    if(grepl('[A-Z]', substr(gsub('.*?:', "", t), 1,1))){
+    if(isNMDP(t)){
       
       nmdp_allele<-t
       convertedAllele<-convertNMDP(t)[[1]]

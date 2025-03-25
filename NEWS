@@ -1,3 +1,14 @@
+MGP v 1.12.3 3/25/25
+-------------------
+  * made function for determining if an allele is NMDP and replaced code accordingly
+  * fixed issue in calcDSA where if an NMDP allele ended with a 'P' or 'L', the 
+  suffix variant was being removed in the code, causing an incorrect NMDP code to 
+  be evaluated. revised logic to if the allele ends with a 'P' or 'L' and is not
+  an NMDP allele
+  * applied the same logic for skipping 'Q' alleles
+  * fixed issue of executeMGPServer not running properly if there is a novel allele;
+  there were missing parameters for donor_filter and recipient_filter
+
 MGP v 1.12.2 2/11/25
 -------------------
   * revised surrogate logic to rely on sero tables converted from KO's sero 
