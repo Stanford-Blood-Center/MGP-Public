@@ -41,9 +41,9 @@ ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.12.4', collapsible
                             #main panel
                             mainPanel(
                               div(class='spinnerBox', use_busy_spinner(spin = 'intersecting-circles', color = '#DC143C')),
-                              textOutput('p_itl'),
                               textOutput('p_check'),
                               textOutput('p_itl_oops'),
+                              uiOutput('typingException'),
                               uiOutput('mainPanel')
                             )
                           )),
