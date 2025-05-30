@@ -1,5 +1,5 @@
 #external functions
-#v 1.12.3
+#v 1.12.4
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -975,12 +975,12 @@ getSampleNumber<-function(con, r_itl){
   
 }
 
-#get test numbers for IgG 
+#get test numbers for IgG where tests are billable
 getIgGTestNums<-function(con, s_num){
   
   res<-dbGetQuery(con, sprintf("SELECT test_number
                            FROM dbo.Patient_tests
-                           WHERE sample_number = %s and test_type_code in ('LSAB1', 'LSAB2')", s_num))
+                           WHERE sample_number = %s AND test_type_code in ('LSAB1', 'LSAB2') AND billing_flag = 'B'", s_num))
   testNums<-res %>%
     pull(test_number)
   
@@ -1093,7 +1093,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
   mmAllelesAppend<-donorTyping
   
   for(t in mismatched_alleles){
-    
+    browser()
     surrogate<-NA
     nmdp_allele<-NULL
     
@@ -1207,7 +1207,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
               #DRB5
               'DR-5101' = c('DRB5*01:01', 'DRB5*01:02'), 
               'DR-5102' = 'DRB5*02:02',
-              #use ag for DR-5103 since we don't have the bead
+              #use ag for DR-5103 since we don't have the bead (DRB5*01:03)
               'DR-5103' = 'DR51'
             )
             surrogate<-DRmapping[[surrogate]]

@@ -7,7 +7,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.12.3</b></i></h6>
+    <h6><i><b>Version 1.12.4</b></i></h6>
     <br>
 
     <div class='instruction'>
