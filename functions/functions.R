@@ -44,7 +44,7 @@ getDonors<-function(mg_df){
 getTyping<-function(con, mgDF, type){
   
   alignments<<-readRDS('ref/alignments.rda')
-  
+
   hla_cols <- sort(do.call(paste, c(expand.grid(c('a', 'b', 'c', 'dr', 'drp', 'dqa', 'dqb', 'dpa', 'dpb'), c(1,2)), sep = '_')))
   
   if(type == 'r'){
@@ -138,7 +138,6 @@ getTyping<-function(con, mgDF, type){
   novelAllelesAll<-c()
   
   for(j in colnames(t_df)){
-    
     if(any(grepl('@', t_df[,j]))){
       if(j == 'DRB'){
         delimit <- ''
@@ -1093,7 +1092,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
   mmAllelesAppend<-donorTyping
   
   for(t in mismatched_alleles){
-    browser()
+
     surrogate<-NA
     nmdp_allele<-NULL
     

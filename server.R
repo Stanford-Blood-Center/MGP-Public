@@ -82,6 +82,8 @@ server <- function(input, output, session) {
     output$q_check <- NULL
     output$donor_itl <- NULL
     output$p_itl_oops <- NULL
+    output$typingException <- NULL
+    main$error <- NULL
     novel$syn <- NULL
     novel$position<-NULL
     novel$click<-1
@@ -167,6 +169,7 @@ server <- function(input, output, session) {
   novel<-reactiveValues(syn=NULL, position=NULL, click=1, selection_syn = list(), region_list = list(), totalAlleles = NULL, listNames = NULL, region = NULL)
   hla<-reactiveValues(recip=NULL, donor=NULL, recipNull=NULL, dMG=NULL, log=NULL, filter_donor = NULL, filter_recip = NULL)
   counter <- reactiveVal(1)
+  main<-reactiveValues(error=NULL)
   
   #run MGP button logic
   observeEvent(input$run, {
@@ -189,6 +192,10 @@ server <- function(input, output, session) {
       lgr$info('***** REVIEW MODE *****')
     }
     
+    lgr$info(sprintf('Patient ITL: %s', patient$itl))
+    
+    tryCatch(
+      {
     lgr$info('Extracting Match Grade data...')
     mg<-getMatchGrade(con, patient$itl)
     r_mg<-mg %>%
@@ -206,7 +213,39 @@ server <- function(input, output, session) {
     lgr$info('Extracting donor typing...')
     
     donor_Typing<-getTyping(con, hla$dMG, type = 'd')
-
+  },
+    error = function(e){
+      hide_spinner()
+      lgr$fatal(e)
+      main$error<-HTML(sprintf('Match Grade evaluations for recipient ITL %s <b><span style=color:red;>failed</b></span>. Please download the log and e-mail it to <b>liv.tran@stanford.edu</b> to troubleshoot.', patient$itl))
+      }
+  )
+    
+    if(!is.null(main$error)){
+      
+      output$typingException<-renderUI(main$error)
+      
+      output$sideLog<-renderUI(
+        tagList(
+          hr(),
+          div(style="text-align:center;",
+              downloadButton("downloadlog", label = "Download log")
+          )
+        ))
+      
+      #download log client
+      output$downloadlog <- downloadHandler(
+        filename <- function() {
+          basename(hla$log)},
+        
+        content <- function(file) {
+          file.copy(hla$log, file)
+        }
+      )
+      
+      return()
+    }
+    
     hla$donor<-donor_Typing[[1]]
 
     donor_novel_alleles<-donor_Typing[[3]]
