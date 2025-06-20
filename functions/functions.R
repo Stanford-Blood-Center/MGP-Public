@@ -1,5 +1,5 @@
 #external functions
-#v 1.12.4
+#v 1.12.5
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -10,7 +10,7 @@ suppressPackageStartupMessages(library(rvest))
 dbConn <- function(){
   
   con <- dbConnect(odbc(),
-                   Driver = "SQL Server",
+                   Driver = Sys.getenv('DRIVER'),
                    Server = Sys.getenv('SERVER'),
                    Database = Sys.getenv('DB'),
                    UID = Sys.getenv('DB_USERNAME'),
