@@ -183,9 +183,20 @@ server <- function(input, output, session) {
     lgr$add_appender(AppenderFile$new(hla$log), name = "mg_log")
 
     lgr$info(paste('Executed by mTilda user: ', username$log, sep = ''))
-    sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
-    lgr$info(paste('SUNetID: ', sunetID, sep = ''))
     
+    spUsername<-Sys.getenv('SHINYPROXY_USERNAME')
+    institution<-Sys.getenv('INSTITUTION_ID')
+    
+    #default to generic 'Institution ID' if not set as env variable
+    if(institution == ""){
+      institution<-"Institution ID"
+    }
+    
+    #do not print institution id log line if there isn't a SHINYPROXY_USERNAME set 
+    if(spUsername != ""){
+      lgr$info(paste(institution, ': ', spUsername, sep = ''))
+    }
+
     if(username$creds == '30'){
       lgr$info('***** CALCULATION MODE *****')
     } else if(username$creds %in% c('50', '60')){
