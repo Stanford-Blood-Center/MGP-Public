@@ -79,8 +79,11 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, sy
                  uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>. '))
                } else{
                  message<-paste(message, ' Please download the log and e-mail it to %s to troubleshoot.', sep = '')
-                 lgr$info(sprintf(message, patient, 'failed. ', 'livtran@stanford.edu'))
-                 uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', '<b>livtran@stanford.edu</b>'))
+                 
+                 email<-getMaintainerEmail()
+                 
+                 lgr$info(sprintf(message, patient, 'failed. ', email))
+                 uiOutMess<-HTML(sprintf(message, patient, ' <b><span style=color:red;>failed</b></span>.', sprintf('<b>%s</b>', email)))
                }
                lgr$info('**********MATCH GRADE EVALUATION END**********')
                hide_spinner()

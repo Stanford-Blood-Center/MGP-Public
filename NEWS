@@ -1,3 +1,13 @@
+MGP v 1.12.5 6/20/25
+-------------------
+  * replace 'Driver' in dbConn() function with an environment variable
+  * replaced static 'SUNetID' with the 'INSTITUTION_ID' env variable; if not set,
+  default to 'Instution ID'
+  * changed logging for SUNetID username; if 'SHINYPROXY_USERNAME' env variable is not set,
+  the institution name and ShinyProxy username will not be logged'
+  * replaced hard coded maintainer e-mail with an environment variable and replaced in 
+  executeMGPServer(), server.R, and instructions.R
+
 MGP v 1.12.4 5/30/25
 -------------------
   * fixed getTestNumbers() to only look for billable IgG tests

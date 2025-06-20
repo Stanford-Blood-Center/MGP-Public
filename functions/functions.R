@@ -1493,3 +1493,15 @@ missingModal<-function(message){
     footer = modalButton('OK!')
   )
 }
+
+#get maintainer e-mail
+getMaintainerEmail <- function(){
+  
+  maintainerEmail <- Sys.getenv('MAINTAINER_EMAIL')
+  
+  if(maintainerEmail == ""){
+    maintainerEmail<-'maintaneremail@placeholder.com'
+  }
+  
+  return(maintainerEmail)
+}
