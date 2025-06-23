@@ -1,12 +1,52 @@
 # Match Grade Populator
 
-MGP (Match Grade Populator) is….
+Match Grade Populator (MGP) is a novel computational tool that automates the 
+calculations used in bone marrow transplant compatibility evaluation.
 
 MGP is written in R, and uses the Shiny web application framework.
 
-# How it Works
+# What it does
 
-TODO
+MGP calculates the number of HLA phenotype mismatches, quantifies the number of 
+Graft vs Host (GvH) and Host vs Graft (HvG) directional mismatches, evaluates 
+donor compatibility against allogeneic HLA antibodies, and assesses T-Cell 
+Epitope permissibility for DPB1 mismatched alleles.
+
+# How it works
+
+On start up, MGP prompts the user for a mTilda username upon start-up. 
+
+1. Enter a registered mTilda username and press '**Validate username**'. If the entered
+name is not found, the user will not be able to access the application.
+2. Enter a patient ITL in the text box labeled '**Patient ITL**'.
+3. A drop-down box populated with donors available for evaluation for the entered
+patient ITL. Select the desired donor for evaluation. Only one donor may be 
+evaluated at a time.
+4. Click on the '**Run MGP**' button to begin evaluation. A red, busy spinner will 
+appear in the main panel while the program is running.
+
+Output to the main panel is dynamically adjusted based on the mTilda user’s authorization level. 
+
+Technologist level credentials trigger ‘**Calculation**’ mode, which writes calculated 
+results to the Match Grade software. 
+
+Higher tier credentials trigger ‘**Review**’ mode, which shows any  discrepancies 
+between MGP calculations and Match Grade content. 
+
+Both modes display locus-level mismatches, if donor serum antibodies are present, 
+and whether surrogates were used due to donor alleles not being present in the 
+Single Antigen Bead (SAB) panel. 
+
+Logs containing important information on the evaluation process are available 
+for download after each run. 
+
+
+# APIs
+
+MGP uses the **IPD-IMGT/HLA's DPB1 T-Cell Epitope Algorithm v 2.0** API 
+to determine HLA-DPB1 T-Cell epitope permissibility. Documentation for the API
+can be found [here](https://www.ebi.ac.uk/ipd/imgt/hla/matching/match_apis/).
+
 
 # Prerequisites
 
