@@ -72,8 +72,8 @@ ENV DB_USERNAME=noUsername
 ENV DB_PW=noPassword
 ENV TZ=America/Los_Angeles
 ENV DRIVER="ODBC Driver 17 for SQL Server"
-ENV INSTITUTION_ID="SUNetID"
-ENV MAINTAINER_EMAIL="livtran@stanford.edu"
+ENV INSTITUTION_ID="Institution ID"
+ENV MAINTAINER_EMAIL="maintainer@placeholder.com"
 
 # When the container is run without an explicit command, this is what we do:
 # Start our Shiny app!  Listen on port 3838, and expose that to the outside.
