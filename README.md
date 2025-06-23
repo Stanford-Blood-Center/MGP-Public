@@ -58,7 +58,7 @@ genotypes.
 
 MGP is built on the following software:
 
-* **R 4.4**: The latest version in the 4.4.x series should work.  
+* **R 4.4**: The latest version in the 4.4.x series should work.
 
 * **renv**: The [renv](https://rstudio.github.io/renv/) R package is used to
   download and install the other packages that MGP needs.  This is the only R
@@ -175,6 +175,12 @@ run MGP.
 
 Here are the environment variables you need to set:
 
+* Name: `DRIVER`
+
+  Derscription: The name of the ODBC Driver to use for connecting to the
+  database.  This should be the name of a driver from the `odbcinst.ini`
+  configuration file.  For example, "ODBC Driver 17 for SQL Server".
+
 * Name: `SERVER`
 
   Description: The hostname or IP address of the SQL Server.
@@ -205,9 +211,25 @@ Here are the environment variables you need to set:
   If you do not set the `TZ` environment variable, the behavior depends on how
   you run MGP: MGP may automatically use the system time zone, or it may fall
   back to UTC.
-  
-The `TZ` environment variable is the only one that is optional: All
-other environment variables are required.
+
+* Name: `MAINTAINER_EMAIL`
+
+  Description: The email address of the person who maintains this installation
+  of MGP.
+
+  If you do not set the `MAINTAINER_EMAIL` environment variable, the string
+  `maintaneremail@placeholder.com` will be used instead.
+
+* Name: `INSTITUTION_ID`
+
+  Description: The term that your site uses to refer to usernames.  At Stanford
+  University, this is "SUNetID".
+
+  If you do not set the `INSTITUTION_ID` environment variable, the string
+  "Instituion ID" will be used instead.
+
+The `TX`, `MAINTAINER_EMAIL`, and `INSTITUTION_ID` environment variables are
+optional; all others are required.
 
 ## Running with Docker
 
