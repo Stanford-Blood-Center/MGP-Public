@@ -128,8 +128,8 @@ There are three ways to build MGP.  From easiest to hardest the options are…
 The easiest way of building MGP is to use the Dockerfile.  The container
 image uses base images from the [Rocker Project](https://rocker-project.org),
 which provides a R installation built on top of Ubuntu.
-The Dockerfile then installs the libraries, renv, and hands off to renv for R
-package installation.
+The Dockerfile then installs the non-R libraries, installs renv, and hands off
+to renv for R package installation.
 
 To build the docker image, follow these steps:
 
@@ -283,12 +283,52 @@ optional; all others are required.
 If you used the *Docker* procedure to build MGP, you should have a container
 image named "mgp:latest".
 
-TODO: ODBC Configuration.  Running.
+Before running the container, you will need to set environment variables.  You
+can set these in your shell's local environment, in a text file of environment
+variables, or on the `docker` command line.  We recommend placing environment
+variables in a text file.
 
-As the program runs, it will print log messages to your terminal's standard
-output.  Those messages can also be viewed using the `docker container logs`
-command.  For each Match Grade that is performed, MGP will also
-generate a log file, which can be downloaded through the MGP web site.
+Here is an example file, named `mgp.env`, containing MGP environment variables:
+
+```
+SERVER=dbserver.example.com\mTilda
+DB=mTilda
+DB_USERNAME=something
+DB_PW=somethingElse
+MAINTAINER_EMAIL=admin@example.com
+INSTITUTION_ID=MyBCID
+TZ=America/New_York
+```
+
+(Since you are using the container, you should not set the `DRIVER` environment
+variable.  The other variables should be customized to your environment.)
+
+With the `mgp.env` file ready, you can use this Docker command to run the
+container:
+
+```
+docker run --detach --rm --publish-all --env-file mgp.env --platform linux/amd64 mgp:latest
+```
+
+(Again, `--platform linux/amd64` is only needed if running Docker on a macOS
+system.)
+
+The MGP application listens on port 3838 inside the container; the
+`--publish-all` operation will connect that port to a random port on your
+machine.  The `docker container ls` command will tell you which port was
+assigned.
+
+The `--detach` option runs the container in the background, and the `--rm`
+option will clean up the container after it is stopped.
+
+As MGP runs, you can run the `docker logs` command to see the logs from the
+container.  To stop the container, run `docker stop`.  For each Match Grade
+that is performed, MGP will also generate a log file, which can be downloaded
+through the MGP web site.
+
+Here is an example of how to run the MGP Docker container:
+
+[![asciicast](https://asciinema.org/a/724444.svg)](https://asciinema.org/a/724444)
 
 ## Running with GitHub Actions
 
