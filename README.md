@@ -34,8 +34,8 @@ Higher tier credentials trigger ‘**Review**’ mode, which shows any  discrepa
 between MGP calculations and Match Grade content. 
 
 Both modes display locus-level mismatches, if donor serum antibodies are present, 
-and whether surrogates were used due to donor alleles not being present in the 
-Single Antigen Bead (SAB) panel. 
+and whether surrogates were used due to donor alleles not being present in 
+Class I and Class II Single Antigen Bead (SAB) panels. 
 
 Logs containing important information on the evaluation process are available 
 for download after each run. 
@@ -43,10 +43,16 @@ for download after each run.
 
 # APIs
 
-MGP uses the **IPD-IMGT/HLA's DPB1 T-Cell Epitope Algorithm v 2.0** API 
-to determine HLA-DPB1 T-Cell epitope permissibility. Documentation for the API
-can be found [here](https://www.ebi.ac.uk/ipd/imgt/hla/matching/match_apis/).
+#### **IPD-IMGT/HLA's DPB1 T-Cell Epitope Algorithm v 2.0**
+- The HLA-DPB1 T-cell Epitope API determines HLA-DPB1 T-Cell epitope permissibility.
+- Documentation for the API can be found [here](https://www.ebi.ac.uk/ipd/imgt/hla/matching/match_apis/).
 
+
+#### **National Marrow Donor Program (NMDP) Multiple Allele Codes (MAC)**
+- The NMDP MAC API returns possible subtypes for a given NMDP allele.
+- Documentation for the API can be found [here](https://hml.nmdp.org/mac/).
+- **Note**: if the API is down, MGP will fail for any evaluations that consist of NMDP
+genotypes. 
 
 # Prerequisites
 
@@ -78,11 +84,6 @@ The R packages we use rely on the following libraries:
 ## Reference Databases
 
 In addition to software packages, MGP relies on several data sources.
-
-MGP uses the [National Marrow Donor Program](https://www.nmdp.org)'s [Multiple
-Allele Codes (MAC) API](https://hml.nmdp.org/mac/).  This saves us the work of
-having to download and process the text-based MAC lists, but means that when
-the API is down, this app will be partially unavailable.
 
 TODO: Add text covering the remaining items in the `ref` directory.
 
