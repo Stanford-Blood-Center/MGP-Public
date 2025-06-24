@@ -73,13 +73,33 @@ The R packages we use rely on the following libraries:
 
   * [libxml2](https://gitlab.gnome.org/GNOME/libxml2/-/wikis/home)
 
-  * libodbc from the [unixODBC project](https://www.unixodbc.org)
+  * On Linux and macOS, libodbc from the [unixODBC
+    project](https://www.unixodbc.org).  Read more in the *ODBC* section, below.
 
   * The Microsoft [ODBC Driver for SQL
     Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver17),
     **version 17**.
 
   * [zlib](https://zlib.net) (also known as "zlib1" or "zlib1g").
+
+## ODBC
+
+MGP uses ODBC to connect to mTilda's database.  ODBC separates its functionality
+into the "driver manager"—which is database-agnostic—and a database-specific
+driver.  In R, the [odbc
+package](https://cran.r-project.org/web/packages/odbc/index.html) provides an
+interface between the ODBC driver manager and R's [DBI
+package](https://dbi.r-dbi.org).  The R packages (obbc and DBI) are installed
+through renv; you are responsible for providing the driver manager and the
+database driver.
+
+On Windows, the ODBC driver manager is built-in.  On macOS and Linux, you will
+have to install the [unixODBC project](https://www.unixodbc.org),
+
+If you are using SQL Server to host the mTilda database, then your database
+driver will be the Microsoft [ODBC Driver for SQL
+Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver17).
+Note that **you must use Driver 17**, as Driver 18's defaults cause issues.
 
 ## Reference Databases
 
@@ -152,9 +172,7 @@ to specific instructions is left as an exercise for the reader.
 2. Install all of the libraries listed in the *Requirements* section.  Ensure
    that both the library *and the header files* are available.
 
-3. TODO: ODBC Configuration
-
-4. Download (or clone) a copy of this Git repository.  `cd` to your copy.
+3. Download (or clone) a copy of this Git repository.  `cd` to your copy.
 
 4. Run `renv restore`.  This will download and build the R pacakges.  Expect it
    to take some time.
@@ -163,9 +181,35 @@ You should now have an R environment that is ready to run MGP.
 
 # How to Run
 
-Once you have "built" MGP, you need to run it!  To do so, you first need to set
-environment variables.  Then, you need to run MGP according to how you built
-it.
+Once you have "built" MGP, you need to run it!  To do so, you first need to
+identify which ODBC driver you will be using.  Then, you need to set
+environment variables.  Finally, you can run MGP according to how you built it.
+
+## ODBC Driver
+
+To configure MGP, you need to tell it which ODBC driver to use.
+If you are using the Docker container, you can skip this step.
+
+The ODBC driver manager provides a list of drivers, either in an app or in an
+INI file.
+
+For example, here is the contents of the `odbcinst.ini` file on a macOS system,
+after installing the Microsoft ODBC Driver for SQL Server, version 17:
+
+```
+$ cat /opt/local/etc/odbcinst.ini
+[ODBC Driver 17 for SQL Server]
+Description=Microsoft ODBC Driver 17 for SQL Server
+Driver=/opt/local/lib/libmsodbcsql.17.dylib
+UsageCount=1
+```
+
+On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
+On Windows, the information is available through the *ODBC Data Source
+Administrator* application, in the *Drivers* tab.
+
+You will need to identify the name of the ODBC driver to use, and then set the
+appropriate environment variable.
 
 ## Environment Variables
 
@@ -180,6 +224,9 @@ Here are the environment variables you need to set:
   Derscription: The name of the ODBC Driver to use for connecting to the
   database.  This should be the name of a driver from the `odbcinst.ini`
   configuration file.  For example, "ODBC Driver 17 for SQL Server".
+
+  If you are using the Docker container, this environment variable is already
+  set for you in the container, so you should ignore it.
 
 * Name: `SERVER`
 
@@ -259,7 +306,8 @@ If you used the *Building from Source* procedure to build MGP, your Git
 repository's `renv` directory should now contain lots of files, representing
 the R packages that renv installed.
 
-Make sure you have set the environment variables.
+Make sure you have set the environment variables.  Since you are not using the
+Docker container, you *will* need to set the `DRIVER` environment variable.
 
 To run the application, run the command `renv run app.R`.  After a short delay,
 you should see the message `Listening on http://127.0.0.1:7346` (though you may
