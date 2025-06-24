@@ -147,6 +147,10 @@ After the container build completes, you will have a container image named
 (or "tagged") "mgp".  More specifically, it will be tagged "mgp:latest", as
 this is your latest build of the MGP container image.
 
+Here is a demo of building the container image on a macOS system:
+
+[![asciicast](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1.svg)](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1)
+
 ## GitHub Actions
 
 This repository includes a GitHub Actions workflow which will run any time
