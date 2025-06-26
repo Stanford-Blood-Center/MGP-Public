@@ -104,9 +104,35 @@ Note that **you must use Driver 17**, as Driver 18's defaults cause issues.
 
 ## Reference Databases
 
-In addition to software packages, MGP relies on several data sources.
+The `alignments.rda` file in the `ref` directories come from the ["Alignments"
+folder](https://github.com/ANHIG/IMGTHLA/tree/Latest/alignments) of the
+[IPD-IMGT/HLA Database on GitHub](https://github.com/ANHIG/IMGTHLA/).  The
+`updateAlignmentVersion.R` R script (located in the `functions` directory) is
+responsible for building this file.  It is built in to the application to speed
+up program load times, particularly for the Docker container (which cannot
+cache files between executions).
 
-TODO: Add text covering the remaining items in the `ref` directory.
+The R script calls BLAASD (Build Loci Amino Acid Specific Dataframe), which
+extracts alignment sequence information for a given locus from the
+ANHIG/IMGTHLA GitHub repository to produce a dataframe of individual amino acid
+data for each amino acid position for all alleles, for a user-defined HLA locus
+or loci.
+
+We acknowledge the following publications describing the IPG-IMGT/HLA Database:
+
+Dominic J Barker, Giuseppe Maccari, Xenia Georgiou, Michael A Cooper, Paul
+Flicek, James Robinson, Steven G E Marsh, The IPD-IMGT/HLA Database, *Nucleic
+Acids Research*, Volume 51, Issue D1, 6 January 2023, Pages D1053–D1060,
+[https://doi.org/10.1093/nar/gkac1011](https://doi.org/10.1093/nar/gkac1011).
+
+James Robinson, Dominic J Barker, Steven G E Marsh, 25 years of the
+IPD-IMGT/HLA Database, *HLA*, Volume 103, Issue 6, June 2024, e15549,
+[https://doi.org/10.1111/tan.15549](https://doi.org/10.1111/tan.15549).
+
+J. Robinson, A. Malik, P. Parham, J. G. Bodmer, S. G. E. Marsh, IMGT/HLA - a
+sequence database for the human major histocompatibility complex, *Tissue
+Antigens*, March 2000, Volume 55, Issue 3, Pages 280-287,
+[https://doi.org/10.1034/j.1399-0039.2000.550314.x](https://doi.org/10.1034/j.1399-0039.2000.550314.x).
 
 # How to Build
 
@@ -367,5 +393,6 @@ generate a log file.
 
 Match Grade Populator is © Stanford Blood Center, LLC.
 
-TODO: Add copyright/licensing information about the items in the `ref`
-directory.
+The copyrightable parts of the IPD-IMGT/HLA database are covered under the
+Creative Commons Attribution-NoDerivs License.  Read the [IPD-IMGT/HLA License
+and Disclaimer](https://www.ebi.ac.uk/ipd/imgt/hla/licence/).
