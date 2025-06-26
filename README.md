@@ -216,6 +216,15 @@ Once you have "built" MGP, you need to run it!  To do so, you first need to
 identify which ODBC driver you will be using.  Then, you need to set
 environment variables.  Finally, you can run MGP according to how you built it.
 
+*For multi-user use, we recommend using
+[ShinyProxy](https://www.shinyproxy.io)*: For MGP to work, it needs read access
+to the mTilda database.  That means MGP needs access to database credentials,
+and those should not be kept on end-user machines.  Running the MGP Docker
+container inside ShinyProxy ensures the application code and configuration are
+kept off of end-user machines.  In addition, ShinyProxy likely supports your
+site's authentication system, and is also able to use "Social Auth" (like
+Google) as a fallback.
+
 ## ODBC Driver
 
 To configure MGP, you need to tell it which ODBC driver to use.
@@ -391,6 +400,49 @@ presented with the MGP main page.
 As the program runs, it will print log messages to your terminal's standard
 output.  For each Match Grade that is performed, MGP will also
 generate a log file.
+
+## Running in ShinyProxy
+
+To use MGP within ShinyProxy, you should first confirm that the Docker
+container works.  To do this, follow the instructions in the *Running with
+Docker* section.  At the end, you should have a `mgp.env` file that configures
+MGP for your environment.
+
+Next, follow the ShinyProxy [Getting
+Started](https://www.shinyproxy.io/documentation/getting-started/) instructions
+to install ShinyProxy and perform basic configuration.  You may also want to
+read the
+[Configuration](https://www.shinyproxy.io/documentation/configuration/) section
+for information on how to configure ShinyProxy to use your site's
+authentication.  You should be able to use the pre-configured "Hello
+Application" and "06\_tabsets" apps.
+
+With ShinyProxy working, you may proceed to add MGP.  To do so, add a new app
+to the list.  Here is an example configuration snippet:
+
+```
+proxy:
+  docker:
+    image-pull-policy: always
+  specs:
+    - id: mgp
+      display-name: MGP
+      description: Match Grade Populator
+      container-image: ghcr.io/stanford-blood-center/mgp-public:main
+      container-env-file: mgp.env
+```
+
+The above example uses the `mgp.env` file you created while following the
+*Running with Docker* instructions.  It also sets ShinyProxy's image pull
+policy to "always", which will prompt ShinyProxy to check for an updated
+container image whenever an app is launched.
+
+After changing the ShinyProxy configuration, restart ShinyProxy, and you should
+have MGP available as an app:
+
+![ShinyProxy's home page, showing the MGP
+app](https://github.com/user-attachments/assets/2ca3f634-3dd6-43ce-9051-18c3cfd56a05)
+
 
 # Copyright & Licensing
 
