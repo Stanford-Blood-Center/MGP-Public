@@ -40,13 +40,14 @@ Class I and Class II Single Antigen Bead (SAB) panels.
 Logs containing important information on the evaluation process are available 
 for download after each run. 
 
-
 # APIs
+
+MGP uses a number of APIs.  You do not need credentials to access these APIs,
+but you do need to use a machine that can connect to the Internet.
 
 #### **IPD-IMGT/HLA's DPB1 T-Cell Epitope Algorithm v 2.0**
 - The HLA-DPB1 T-cell Epitope API determines HLA-DPB1 T-Cell epitope permissibility.
 - Documentation for the API can be found [here](https://www.ebi.ac.uk/ipd/imgt/hla/matching/match_apis/).
-
 
 #### **National Marrow Donor Program (NMDP) Multiple Allele Codes (MAC)**
 - The NMDP MAC API returns possible subtypes for a given NMDP allele.
