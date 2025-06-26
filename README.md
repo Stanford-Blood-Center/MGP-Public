@@ -13,6 +13,8 @@ donor compatibility against allogeneic HLA antibodies, and assesses T-Cell
 Epitope permissibility for DPB1 mismatched alleles.
 
 # How it works
+Note: MGP is currently only compatible with mTilda. MGP integration with 
+other Laboratory Information Management Systems (LIMS) will require code changes.
 
 On start up, MGP prompts the user for a mTilda username upon start-up. 
 
@@ -115,8 +117,17 @@ cache files between executions).
 The R script calls BLAASD (Build Loci Amino Acid Specific Dataframe), which
 extracts alignment sequence information for a given locus from the
 ANHIG/IMGTHLA GitHub repository to produce a dataframe of individual amino acid
-data for each amino acid position for all alleles, for a user-defined HLA locus
-or loci.
+positions for all alleles, for a user-defined HLA locus or loci.
+
+The code block for BLAASD is derived from the HLAtools R package. Future 
+versions of MGP may directly call HLAtools::buildAlignments().
+
+We acknowledge the Mack Laboratory at UCSF for the usage of BLAASD:
+
+Livia Tran, Ryan Nickens, Leamon Crooms IV, Derek Pappas, Vinh Luu, Josh Bredeweg,
+Steven Mack, HLAtools: Toolkit for HLA Immunogenomics.
+https://CRAN.R-project.org/package=HLAtools
+
 
 We acknowledge the following publications describing the IPG-IMGT/HLA Database:
 
