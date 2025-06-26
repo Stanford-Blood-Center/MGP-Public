@@ -1,3 +1,8 @@
+MGP v 1.12.6 6/26/25
+-------------------
+  * moved novel allele processing code up in calcABCDRB() and calcDQDP() to 
+  fix incorrect novel allele mismatch calculations
+
 MGP v 1.12.5 6/20/25
 -------------------
   * replace 'Driver' in dbConn() function with an environment variable
