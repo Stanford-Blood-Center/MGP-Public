@@ -1,5 +1,5 @@
 #external functions
-#v 1.12.4
+#v 1.12.6
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -10,7 +10,7 @@ suppressPackageStartupMessages(library(rvest))
 dbConn <- function(){
   
   con <- dbConnect(odbc(),
-                   Driver = "SQL Server",
+                   Driver = Sys.getenv('DRIVER'),
                    Server = Sys.getenv('SERVER'),
                    Database = Sys.getenv('DB'),
                    UID = Sys.getenv('DB_USERNAME'),
@@ -479,6 +479,16 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
   r_alleles<-na.omit(unlist(r_cat, use.names=F))
   
+  #novel allele handling - recipient
+  if(any(grepl('@', r_alleles))){
+    r_alleles<-processNovelAlleles(r_alleles, synqList)
+  }
+  
+  #novel allele handling - donor
+  if(any(grepl('@', d_alleles))){
+    d_alleles<-processNovelAlleles(d_alleles, synqList)
+  }
+  
   #filter out one allele if 2 alleles have the same p group and filter out
   #null expression variant alleles for recipient and donor
   if(!is.null(filter_d)){
@@ -504,16 +514,6 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
   } else{
     
     nmdp_flag<-reg_flag<-FALSE
-    
-    #novel allele handling - recipient
-    if(any(grepl('@', r_alleles))){
-      r_alleles<-processNovelAlleles(r_alleles, synqList)
-    }
-    
-    #novel allele handling - donor
-    if(any(grepl('@', d_alleles))){
-      d_alleles<-processNovelAlleles(d_alleles, synqList)
-    }
     
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
@@ -798,6 +798,16 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
   d_alleles<-na.omit(unlist(d_cat, use.names=F))
   r_alleles<-na.omit(unlist(r_cat, use.names=F))
   
+  #novel allele handling - recipient
+  if(any(grepl('@', r_alleles))){
+    r_alleles<-processNovelAlleles(r_alleles, synqList)
+  }
+  
+  #novel allele handling - donor
+  if(any(grepl('@', d_alleles))){
+    d_alleles<-processNovelAlleles(d_alleles, synqList)
+  }
+  
   if(!is.null(filter_d)){
     d_filtered_alleles<-d_alleles[!d_alleles %in% filter_d]
   } else{
@@ -824,16 +834,6 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
   } else{
     
     nmdp_flag<-reg_flag<-FALSE
-    
-    #novel allele handling - recipient
-    if(any(grepl('@', r_alleles))){
-      r_alleles<-processNovelAlleles(r_alleles, synqList)
-    }
-    
-    #novel allele handling - donor
-    if(any(grepl('@', d_alleles))){
-      d_alleles<-processNovelAlleles(d_alleles, synqList)
-    }
     
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
@@ -1381,7 +1381,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
   return(list(call_dsa, dsaDF))
 }
 
-#determine if mutation for novel position is in antigen recognition domain 
+#determine if mutation for novel position is in mature protein sequence
 determinePosition<-function(position, locus){
   
   #class 1
@@ -1419,6 +1419,7 @@ processNovelAlleles<-function(novelAlleles, synqList){
     #move onto the next allele and remove @ sign from novel allele
     if(novelFull %in% names(synqList)){
       if(synqList[[novelFull]] == 'y'){
+        browser()
         novelAlleles[novelAlleles == i]<-gsub('@', '', i)
         next
       } else{
@@ -1492,4 +1493,16 @@ missingModal<-function(message){
     HTML(message),
     footer = modalButton('OK!')
   )
+}
+
+#get maintainer e-mail
+getMaintainerEmail <- function(){
+  
+  maintainerEmail <- Sys.getenv('MAINTAINER_EMAIL')
+  
+  if(maintainerEmail == ""){
+    maintainerEmail<-'maintaneremail@placeholder.com'
+  }
+  
+  return(maintainerEmail)
 }

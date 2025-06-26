@@ -52,11 +52,6 @@ RUN apt-get update && \
 COPY . /usr/local/src/myscripts
 WORKDIR /usr/local/src/myscripts
 
-# The current codebase uses the ODBC driver named "SQL Server".
-# Change that to the driver we have installed.
-RUN sed -i -e 's|SQL Server|ODBC Driver 17 for SQL Server|' \
-  /usr/local/src/myscripts/functions/functions.R
-
 # Install renv, so that we can import the environment.
 RUN R -q -e 'install.packages("renv")' && rm -rf /tmp/*
 
@@ -76,6 +71,9 @@ ENV DB=noDB
 ENV DB_USERNAME=noUsername
 ENV DB_PW=noPassword
 ENV TZ=America/Los_Angeles
+ENV DRIVER="ODBC Driver 17 for SQL Server"
+ENV INSTITUTION_ID="Institution ID"
+ENV MAINTAINER_EMAIL="maintainer@placeholder.com"
 
 # When the container is run without an explicit command, this is what we do:
 # Start our Shiny app!  Listen on port 3838, and expose that to the outside.

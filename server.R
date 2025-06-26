@@ -1,6 +1,6 @@
 #server
 #by: Livia Tran
-#v1.12.4
+#v1.12.5
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -183,9 +183,20 @@ server <- function(input, output, session) {
     lgr$add_appender(AppenderFile$new(hla$log), name = "mg_log")
 
     lgr$info(paste('Executed by mTilda user: ', username$log, sep = ''))
-    sunetID<-Sys.getenv('SHINYPROXY_USERNAME')
-    lgr$info(paste('SUNetID: ', sunetID, sep = ''))
     
+    spUsername<-Sys.getenv('SHINYPROXY_USERNAME')
+    institution<-Sys.getenv('INSTITUTION_ID')
+    
+    #default to generic 'Institution ID' if not set as env variable
+    if(institution == ""){
+      institution<-"Institution ID"
+    }
+    
+    #do not print institution id log line if there isn't a SHINYPROXY_USERNAME set 
+    if(spUsername != ""){
+      lgr$info(paste(institution, ': ', spUsername, sep = ''))
+    }
+
     if(username$creds == '30'){
       lgr$info('***** CALCULATION MODE *****')
     } else if(username$creds %in% c('50', '60')){
@@ -217,7 +228,14 @@ server <- function(input, output, session) {
     error = function(e){
       hide_spinner()
       lgr$fatal(e)
-      main$error<-HTML(sprintf('Match Grade evaluations for recipient ITL %s <b><span style=color:red;>failed</b></span>. Please download the log and e-mail it to <b>liv.tran@stanford.edu</b> to troubleshoot.', patient$itl))
+      
+      message<-'Match Grade evaluations for recipient ITL %s %s Please download the log and e-mail it to %s to troubleshoot.'
+      
+      email<-getMaintainerEmail()
+      
+      lgr$info(sprintf(message, patient$itl, 'failed. ', email))
+      main$error<-HTML(sprintf(message, patient$itl, ' <b><span style=color:red;>failed</b></span>.', sprintf('<b>%s</b>', email)))
+
       }
   )
     
