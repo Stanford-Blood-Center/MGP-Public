@@ -239,6 +239,9 @@ On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
 On Windows, the information is available through the *ODBC Data Source
 Administrator* application, in the *Drivers* tab.
 
+![The "Drivers" tab of the Windows "ODBC Data Sourace Administrator"
+application](https://github.com/user-attachments/assets/913a78ef-f008-432a-bb3f-b327b91fe513)
+
 You will need to identify the name of the ODBC driver to use, and then set the
 appropriate environment variable.
 
