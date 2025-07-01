@@ -459,6 +459,9 @@ app](https://github.com/user-attachments/assets/2ca3f634-3dd6-43ce-9051-18c3cfd5
 
 Match Grade Populator is © Stanford Blood Center, LLC.
 
+The file `functions/BLAASD.R` is © 2020 The Regents of the University of
+California.
+
 The copyrightable parts of the IPD-IMGT/HLA database are covered under the
 Creative Commons Attribution-NoDerivs License.  Read the [IPD-IMGT/HLA License
 and Disclaimer](https://www.ebi.ac.uk/ipd/imgt/hla/licence/).

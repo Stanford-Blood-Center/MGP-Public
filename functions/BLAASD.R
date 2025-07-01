@@ -1,5 +1,6 @@
 ##BLAASD - Build Loci Amino Acid Specific Dataframe v1.5 5/20/2022
 #'BLAASD - Build Loci Amino Acid Specific Dataframe
+# © 2020 The Regents of the University of California
 #'
 #'Extracts alignment sequence information for a given locus from the ANHIG/IMGTHLA GitHub repository to produce a dataframe of individual amino acid data for each amino acid position for all alleles, for a user-defined HLA locus or loci. The first 4 columns are locus, allele, trimmed allele, and allele_name.
 #'
