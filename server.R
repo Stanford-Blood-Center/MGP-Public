@@ -1,5 +1,6 @@
 #server
 #by: Livia Tran
+#Match Grade Populator © Stanford Blood Center, LLC.
 #v1.12.5
 
 suppressPackageStartupMessages(library(odbc))

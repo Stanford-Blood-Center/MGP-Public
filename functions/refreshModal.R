@@ -1,4 +1,5 @@
 #pop up modal for novel alleles
+#Match Grade Populator © Stanford Blood Center, LLC.
 
 refreshModal <- function(novelAlleles, clicks) {
   

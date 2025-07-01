@@ -1,4 +1,5 @@
 #external functions
+#Match Grade Populator © Stanford Blood Center, LLC.
 #v 1.12.6
 
 suppressPackageStartupMessages(library(odbc))
