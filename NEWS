@@ -1,3 +1,19 @@
+MGP v 1.12.7 7/2/25
+-------------------
+  * changes to DSA calculation:
+    -modified calcDSA to accomodate weak DSA (MFI > 1000). all potential DSA
+    will be filtered to only those with an average value greater than > 1000. The
+    presence of weak DSA will not lead to DSA = Y, but it will be present in the
+    output table and will be recorded in the log
+    -removed the 'DPDQ_serological_reference.xlsx' file and all related functions/
+    dependencies
+    * changed surrogate entry for DSA table in case of DPA or DQA - use imputed 
+    antigen instead of display all surrogate alphas
+    -replaced ',' for combos in MFI values with '/' - was leading to 'False positive'
+    reporting with DSA
+    -cleaned up calcDSA
+    -added logging to capture sample number and test numbers used for calcDSA
+
 MGP v 1.12.6 6/26/25
 -------------------
   * moved novel allele processing code up in calcABCDRB() and calcDQDP() to 
