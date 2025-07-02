@@ -1,4 +1,5 @@
 #Instructions section 
+#Match Grade Populator © Stanford Blood Center, LLC.
 
 
 getInstructions<-function(){
@@ -10,7 +11,7 @@ getInstructions<-function(){
   <body>
 
     <h1><b>Instructions</b></h1>
-    <h6><i><b>Version 1.12.6</b></i></h6>
+    <h6><i><b>Version 1.12.7</b></i></h6>
     <br>
 
     <div class='instruction'>

@@ -1,4 +1,5 @@
 #script to update alignments file to most recent 
+#Match Grade Populator © Stanford Blood Center, LLC.
 #1/10/2024 v 1.0
 
 source('functions/BLAASD.R')

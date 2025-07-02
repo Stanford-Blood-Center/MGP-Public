@@ -2,7 +2,8 @@
 #Calculates Match Grade fields in the mTilda Match Grade .exe program
 #By: Livia Tran
 #@Stanford Blood Center
-#Version 1.11.0
+#Match Grade Populator © Stanford Blood Center, LLC.
+#Version 1.12.7
 
 suppressPackageStartupMessages(library(shiny))
 
@@ -12,3 +13,4 @@ source('server.R')
 name<<-NULL
 
 runApp()
+

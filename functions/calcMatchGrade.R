@@ -1,4 +1,5 @@
-#v 1.12.0
+#Match Grade Populator © Stanford Blood Center, LLC.
+#v 1.12.7
 
 options(warn = 2) 
 
@@ -10,8 +11,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
     {
       lgr$info('**********MATCH GRADE EVALUATION START**********')
 
-      c2_antigen_ref<<-getC2RefAlleles()
-      
       lgr$info(paste('Recipient ITL entered:', r_itl))
       errorMessage<-NULL
       
@@ -23,6 +22,8 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
       #get recipient's called antibodies
       sample_num<-getSampleNumber(con, r_itl)
       
+      lgr$info(sprintf('Sample Number: %s', sample_num))
+      
       calculateDSA<-TRUE
       
       #if the sample number is NA, 'Recipient DSA Date' was not populated
@@ -33,6 +34,8 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
         #get IgG test numbers to get MFI values and AB screening results
         #for IgG specific tests
         testNums<-paste(getIgGTestNums(con, sample_num), collapse=',')
+        
+        lgr$info(sprintf('Test Numbers: %s', testNums))
         
         if(testNums == ""){
           errorMessage<-'The selected DSA date in the Match Grade software does not have any associated IgG tests. Please check the selected DSA date.'
@@ -52,6 +55,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
             pull(called_antibodies) %>%
             strsplit(., ' ') %>%
             unlist()
+          
           
           #split any haplotypes into separate alleles
           #positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
@@ -74,6 +78,8 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
             filter(!is.na(antigen)) %>%
             filter(case_when(grepl('DP|DQ', antigen)~grepl(',', probe_id),
                              TRUE ~ TRUE))
+          
+          mfi_vals$probe_id<-gsub(',', '/', mfi_vals$probe_id)
         }
       }
 
