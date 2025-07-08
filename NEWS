@@ -1,3 +1,12 @@
+MGP v 1.12.8 7/8/25
+-------------------
+  * bug fixes
+    - added 'surrogateQuery' variable back and adjusted code as needed
+    - added code to address ASP surrogates for DPB1 (04:01, 04:02, 02:02, 02:02)
+    when trying to see if surrogate is in covered panel beads; grepl needs to be
+    used instead of %in%
+    -moved aspBeads variable out of for loop
+    
 MGP v 1.12.7 7/2/25
 -------------------
   * changes to DSA calculation:

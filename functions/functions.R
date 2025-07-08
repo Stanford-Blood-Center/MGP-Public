@@ -1,6 +1,6 @@
 #external functions
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.7
+#v 1.12.8
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -1083,8 +1083,11 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
   #if both subunits are present in heterodimers 
   mmAllelesAppend<-donorTyping
   
+  #get all beads covered in IgG Class I and Class II testing
+  aspBeads<-keep(mfi_vals$allele, ~ !is.na(.x) & .x != "")
+  
   for(t in mismatched_alleles){
-
+    
     surrogate<-NA
     nmdp_allele<-NULL
     
@@ -1130,9 +1133,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
         filter(allele %in% t) %>%
         distinct(allele, .keep_all = T)
     }
-    
-    aspBeads<-keep(mfi_vals$allele, ~ !is.na(.x) & .x != "")
-    
+   
     #if allele is not tested by ab screening and is A, B, C, DRB1, DRB3/4/5, use 
     #antigen table to find serological equivalent
     if(nrow(allele_mfi)==0){
@@ -1154,8 +1155,10 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       
       if(locus %in% c('A', 'B', 'C', 'DRB1', 'DRB3', 'DRB4', 'DRB5', 'DQB1', 'DPB1')){
         
-        surrogate<-sero_table %>%
-          filter(Allele == t) %>%
+        surrogateQuery<-sero_table %>%
+          filter(Allele == t)
+        
+        surrogate<-surrogateQuery %>%
           select(Serotype) %>% 
           pull()
         
@@ -1174,8 +1177,21 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
           #ie surrogate for A*02:14 is A*02:02, but we don't have A*02:02. however, A*02:02
           #is also a surrogate for A*02:05, which we do have
           
-          if(!surrogate %in% aspBeads){
+          #DPB1 can have an asp (DPB1*02:01, DPB1*02:02, DPB1*04:01, DPB1*04:02)
+          #as the surrogate. Using %in% will not work, since aspBeads only contain
+          #the full heterodimer. Need to use grepl to see if the suggested
+          #surrogate is in aspBeads (which it will be as of version 1.12.8).
+          #if this changes, lines 1194-1196 will need to be changed
+          if(locus == 'DPB1'){
+            surrogateBool <- any(grepl(surrogate, aspBeads, fixed = TRUE))
+          } else{
+            surrogateBool <- surrogate %in% aspBeads
+          }
           
+          if(!surrogateBool){
+            
+            #don't need to worry about this for DPB1 for NOW, since all ASP surrogates
+            #are found in the panel
             aspSearch<-sero_table %>%
               filter(Serotype == surrogate) %>%
               filter(Allele %in% aspBeads)
@@ -1189,7 +1205,8 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
             } 
           
             if(nrow(aspSearch)!=0){ 
-              surrogate<-aspSearch %>% pull(Allele)
+              surrogate<-aspSearch %>% 
+                pull(Allele)
             } 
           }
         }
