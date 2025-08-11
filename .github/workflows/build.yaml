@@ -22,7 +22,7 @@ jobs:
     steps:
       - id: checkout
         name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
 
       - id: setup-buildx
         name: Setup Docker Buildx
@@ -30,7 +30,7 @@ jobs:
 
       - id: login
         name: Log in to registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1
         with: 
           registry: ${{ env.REGISTRY }}
           username: ${{ env.REGISTRY_USERNAME }}
@@ -38,7 +38,7 @@ jobs:
 
       - id: meta
         name: Extract metadata
-        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804
+        uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: |
