@@ -1,7 +1,7 @@
 #ui
 #by: Livia Tran
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.8
+#v 1.12.9
 
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(shinythemes))
@@ -11,7 +11,7 @@ suppressPackageStartupMessages(library(shinybusy))
 
 source('functions/executeMGP.R')
 
-ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.12.8', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
+ui <- navbarPage(title = div('Match Grade Populator (MGP) v 1.12.9', collapsible = FALSE, img(src = "sbc_logo.png", height = "45px",width = "100px",style = "position: fixed; right: 10px; top: 5px;")),theme = shinytheme('cosmo'),
                  
                  #main tab 
                  tabPanel("Main",

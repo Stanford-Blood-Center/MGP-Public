@@ -1,6 +1,6 @@
 #external functions
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.8
+#v 1.12.9
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -44,7 +44,7 @@ getDonors<-function(mg_df){
 #transform loci columns into rows, populate homozygous alleles
 getTyping<-function(con, mgDF, type){
   
-  alignments<<-readRDS('ref/alignments.rda')
+  alignments<<-readRDS(list.files('ref/', pattern = 'alignments', full.names = T))
 
   hla_cols <- sort(do.call(paste, c(expand.grid(c('a', 'b', 'c', 'dr', 'drp', 'dqa', 'dqb', 'dpa', 'dpb'), c(1,2)), sep = '_')))
   
@@ -1087,7 +1087,7 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
   aspBeads<-keep(mfi_vals$allele, ~ !is.na(.x) & .x != "")
   
   for(t in mismatched_alleles){
-    
+  
     surrogate<-NA
     nmdp_allele<-NULL
     
