@@ -24,6 +24,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           path: source
+          fetch-depth: 0
           fetch-tags: 0
           persist-credentials: false
 
@@ -34,6 +35,7 @@ jobs:
           repository: ${{ vars.MIRROR_DESTINATION }}
           ref: main
           path: destination
+          fetch-depth: 0
           fetch-tags: 0
           ssh-key: ${{ secrets.MIRROR_PRIVKEY }}
 
