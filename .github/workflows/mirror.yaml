@@ -1,0 +1,59 @@
+name: Mirror main branch to public repo
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    if: ${{ vars.DO_MIRROR == 'yes' }}
+
+    permissions:
+      contents: read
+
+    steps:
+      - id: checkout-main
+        name: Checkout all of the main branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: ${{ github.repository }}
+          path: source
+          fetch-tags: 0
+          persist-credentials: false
+
+      - id: checkout-remote
+        name: Check out all of the remote's main branch
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+        with:
+          repository: ${{ vars.MIRROR_DESTINATION }}
+          ref: main
+          path: destination
+          fetch-tags: 0
+          ssh-key: ${{ secrets.MIRROR_PRIVKEY }}
+
+      - id: transfer-commits
+        name: Transfer commits from main to destination
+        run: |
+          cd destination
+          git remote add source ../source
+          git fetch source
+          git merge --ff-only source/main
+          git remote rm source
+
+      - id: shortlog
+        name: Display log of commits to push
+        run: |
+          cd destination
+          git shortlog origin/main..HEAD
+
+      - id: push-remote
+        name: Push commits to remote
+        run: |
+          cd destination
+          git push origin main
