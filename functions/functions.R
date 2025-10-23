@@ -1036,25 +1036,6 @@ getMFIvals<-function(con, p_itl, testNums){
   
 }
 
-#get antigen table
-getAntigenTable<-function(con){
-  
-  res<-dbGetQuery(con, "SELECT antigen_name, locus, sero_eq
-                FROM   dbo.Antigens")
-  
-  res<-data.frame(sapply(res[1:ncol(res)], function(x) str_trim(x)))
-  
-  res$antigen_name<-sapply(res$antigen_name, function(x) BIGDAWG::GetField(x, 2))
-  
-  res<-res %>% 
-    filter(!is.na(sero_eq) & !sero_eq %in% c('None', 'Unknown'))
-  
-  res<-res %>%
-    distinct(antigen_name, .keep_all = TRUE)
-  
-  return(res)
-}
-
 #determine if allele is NMDP
 isNMDP<-function(allele){
   return(grepl('[A-Z]', substr(gsub('.*?:', "", allele), 1,1)))
