@@ -24,7 +24,7 @@ dbConn <- function(){
 getMatchGrade<-function(con, r_itl){
   
   mg_res<-dbGetQuery(con, paste("SELECT * 
-                                    FROM dbo.Match_grades 
+                                    FROM Match_grades 
                                     WHERE recipient_number = ", r_itl, sep = ""))
   
   return(mg_res)
@@ -244,26 +244,26 @@ convertNMDP<-function(n_allele){
   
 }
 
-#update dbo.Match_grades table with calculated values
+#update Match_grades table with calculated values
 updateMGtable<-function(connection, type, vals){
   
   #updating match columns
   if(type=='match'){
     
-    res<-dbSendStatement(connection, 'UPDATE dbo.Match_grades
-                        SET dbo.Match_grades.ABCDRDQ_match=?, 
-                            dbo.Match_grades.ABCDRDQ_alleles=?,
-                            dbo.Match_grades.ABCDRB1_match=?,
-                            dbo.Match_grades.ABCDRB1_alleles=?,
-                            dbo.Match_grades.ABCDRB1_mm_GVH=?,
-                            dbo.Match_grades.ABCDRB1_mm_HVG=?,
-                            dbo.Match_grades.DRB345DQDP_match=?,
-                            dbo.Match_grades.DRB345DQDP_alleles=?,
-                            dbo.Match_grades.DRB345DQDP_mm_GVH=?,
-                            dbo.Match_grades.DRB345DQDP_mm_HVG=?,
-                            dbo.Match_grades.Seven_loci_match=?,
-                            dbo.Match_grades.Seven_loci_alleles=?
-                        WHERE dbo.Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, 'UPDATE Match_grades
+                        SET Match_grades.ABCDRDQ_match=?, 
+                            Match_grades.ABCDRDQ_alleles=?,
+                            Match_grades.ABCDRB1_match=?,
+                            Match_grades.ABCDRB1_alleles=?,
+                            Match_grades.ABCDRB1_mm_GVH=?,
+                            Match_grades.ABCDRB1_mm_HVG=?,
+                            Match_grades.DRB345DQDP_match=?,
+                            Match_grades.DRB345DQDP_alleles=?,
+                            Match_grades.DRB345DQDP_mm_GVH=?,
+                            Match_grades.DRB345DQDP_mm_HVG=?,
+                            Match_grades.Seven_loci_match=?,
+                            Match_grades.Seven_loci_alleles=?
+                        WHERE Match_grades.donor_number=?')
     
   }
   
@@ -271,17 +271,17 @@ updateMGtable<-function(connection, type, vals){
   #updating tce column
   if(type=='tce'){
     
-    res<-dbSendStatement(connection, 'UPDATE dbo.Match_grades
-                        SET dbo.Match_grades.DRB345DQDP_mm_TCE=?
-                        WHERE dbo.Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, 'UPDATE Match_grades
+                        SET Match_grades.DRB345DQDP_mm_TCE=?
+                        WHERE Match_grades.donor_number=?')
     
   }
   
   if(type == 'dsa'){
     
-    res<-dbSendStatement(connection, 'UPDATE dbo.Match_grades
-                        SET dbo.Match_grades.DSA=?
-                        WHERE dbo.Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, 'UPDATE Match_grades
+                        SET Match_grades.DSA=?
+                        WHERE Match_grades.donor_number=?')
     
   }
   
@@ -968,7 +968,7 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
 getSampleNumber<-function(con, r_itl){
   
   res<-dbGetQuery(con, sprintf('SELECT sample_number 
-                                       FROM dbo.Match_grades 
+                                       FROM Match_grades 
                                        WHERE recipient_number = %s and donor_number = %s', r_itl, r_itl))$sample_number
   
   return(res)
@@ -979,7 +979,7 @@ getSampleNumber<-function(con, r_itl){
 getIgGTestNums<-function(con, s_num){
   
   res<-dbGetQuery(con, sprintf("SELECT test_number
-                           FROM dbo.Patient_tests
+                           FROM Patient_tests
                            WHERE sample_number = %s AND test_type_code in ('LSAB1', 'LSAB2') AND billing_flag = 'B'", s_num))
   testNums<-res %>%
     pull(test_number)
@@ -992,7 +992,7 @@ getIgGTestNums<-function(con, s_num){
 getAbResults <- function(con, testNumbers) {
   
   res<-dbGetQuery(con, sprintf('SELECT called_antibodies
-                           FROM dbo.Screening_results
+                           FROM Screening_results
                            WHERE test_number in (%s)', testNumbers))
   
   #use str_trim to make sure there is no white space before or after if 'Negative'
@@ -1006,7 +1006,7 @@ getAbResults <- function(con, testNumbers) {
 getMFIvals<-function(con, p_itl, testNums){
   
   res<-dbGetQuery(con, sprintf('SELECT antigen, probe_id, allele, average_value
-                                FROM dbo.Luminex_SA_bead_detail
+                                FROM Luminex_SA_bead_detail
                                 WHERE patient_number = %s AND
                                 test_number in (%s)', p_itl, testNums))
   
