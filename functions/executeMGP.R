@@ -156,7 +156,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, sy
                                                    ABCDRB1_alleles, ABCDRB1_match, ABCDRB1_mm_GVH, ABCDRB1_mm_HVG,
                                                    DRB345DQDP_alleles, DRB345DQDP_match, DRB345DQDP_mm_GVH, DRB345DQDP_mm_HVG,
                                                    DRB345DQDP_mm_TCE, Seven_loci_alleles, seven_loci_match
-                                                   FROM dbo.Match_grades
+                                                   FROM Match_grades
                                                    WHERE recipient_number = %s and donor_number = %s", patient, donor))
             
             dbDisconnect(con)

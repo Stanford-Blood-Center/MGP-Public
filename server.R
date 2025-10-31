@@ -60,7 +60,7 @@ server <- function(input, output, session) {
     
     con <- dbConn()
     
-    username_validation <- dbGetQuery(con, sprintf("select * from dbo.Staff where user_id = '%s'", input$username))
+    username_validation <- dbGetQuery(con, sprintf("select * from Staff where user_id = '%s'", input$username))
     username$creds <- username_validation$security_level
     
     if(nrow(username_validation)!=0){
@@ -111,8 +111,8 @@ server <- function(input, output, session) {
     
     con <- dbConn()
     
-    mg_res <- dbGetQuery(con, paste("SELECT mg.*, p.last_name, p.first_name FROM dbo.Match_grades mg
-                                     LEFT JOIN dbo.Patients p
+    mg_res <- dbGetQuery(con, paste("SELECT mg.*, p.last_name, p.first_name FROM Match_grades mg
+                                     LEFT JOIN Patients p
                                      ON mg.donor_number = p.patient_number
                                      WHERE mg.recipient_number = ", input$p_itl))
     
