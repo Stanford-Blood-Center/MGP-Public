@@ -10,13 +10,18 @@ suppressPackageStartupMessages(library(rvest))
 
 dbConn <- function(){
   
-  con <- dbConnect(odbc(),
-                   Driver = Sys.getenv('DRIVER'),
-                   Server = Sys.getenv('SERVER'),
-                   Database = Sys.getenv('DB'),
-                   UID = Sys.getenv('DB_USERNAME'),
-                   PWD = Sys.getenv('DB_PW'))
-  
+  # use demo DB if MGP is deployed without a configured database 
+  if(Sys.getenv('DB') == 'noDB'){
+    con <- dbConnect(RSQLite::SQLite(), 'demo-db/mgp-demo.db')
+  } else{
+    con <- dbConnect(odbc(),
+                     Driver = Sys.getenv('DRIVER'),
+                     Server = Sys.getenv('SERVER'),
+                     Database = Sys.getenv('DB'),
+                     UID = Sys.getenv('DB_USERNAME'),
+                     PWD = Sys.getenv('DB_PW'))
+  }
+      
   return(con)
 }
 
