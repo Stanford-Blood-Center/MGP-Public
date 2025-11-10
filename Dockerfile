@@ -40,18 +40,24 @@ RUN apt-get update && apt-get install -y curl && \
 # unixodbc-dev is used by the odbc R package.
 # zlib1g-dev is used by the httpuv R package.
 # pkg-config is used since we're bringing in dev packages.
+# sqlite3 is used by the RSQLite R package. If MGP is deployed locally without
+# a user set 'DB' environment variable, a SQLite demo database will be configured
+# as the database connection.
 # ACCEPT_EULA is used by msodbcsql17
 # NOTE: We avoid the driver for SQL Server 18, becaue it enables encryption by
 # default.
 ARG ACCEPT_EULA=y
 RUN apt-get update && \
-  apt-get install -y libodbc2 libcurl4-openssl-dev libssl-dev libxml2-dev msodbcsql17 pkg-config unixodbc-dev zlib1g-dev && \
+  apt-get install -y libodbc2 libcurl4-openssl-dev libssl-dev libxml2-dev msodbcsql17 pkg-config sqlite3 unixodbc-dev zlib1g-dev && \
 	apt-get clean && rm -rf /tmp/*
 
 # Copy all of the files into the container's scripts directory, and set that to
 # be the working directory (the PWD) for all the R commands we run.
 COPY . /usr/local/src/myscripts
 WORKDIR /usr/local/src/myscripts
+
+# Initialize SQLite demo database from SQL data dump
+RUN sqlite3 demo-db/mgp-demo.db < demo-db/demo-db-data-dump.sql
 
 # Install renv, so that we can import the environment.
 RUN R -q -e 'install.packages("renv")' && rm -rf /tmp/*
