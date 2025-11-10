@@ -256,20 +256,20 @@ updateMGtable<-function(connection, type, vals){
   #updating match columns
   if(type=='match'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.ABCDRDQ_match=?, 
-                            Match_grades.ABCDRDQ_alleles=?,
-                            Match_grades.ABCDRB1_match=?,
-                            Match_grades.ABCDRB1_alleles=?,
-                            Match_grades.ABCDRB1_mm_GVH=?,
-                            Match_grades.ABCDRB1_mm_HVG=?,
-                            Match_grades.DRB345DQDP_match=?,
-                            Match_grades.DRB345DQDP_alleles=?,
-                            Match_grades.DRB345DQDP_mm_GVH=?,
-                            Match_grades.DRB345DQDP_mm_HVG=?,
-                            Match_grades.Seven_loci_match=?,
-                            Match_grades.Seven_loci_alleles=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET ABCDRDQ_match=?, 
+                            ABCDRDQ_alleles=?,
+                            ABCDRB1_match=?,
+                            ABCDRB1_alleles=?,
+                            ABCDRB1_mm_GVH=?,
+                            ABCDRB1_mm_HVG=?,
+                            DRB345DQDP_match=?,
+                            DRB345DQDP_alleles=?,
+                            DRB345DQDP_mm_GVH=?,
+                            DRB345DQDP_mm_HVG=?,
+                            seven_loci_match=?,
+                            Seven_loci_alleles=?
+                        WHERE donor_number=?")
     
   }
   
@@ -277,17 +277,17 @@ updateMGtable<-function(connection, type, vals){
   #updating tce column
   if(type=='tce'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.DRB345DQDP_mm_TCE=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET DRB345DQDP_mm_TCE=?
+                        WHERE donor_number=?")
     
   }
   
   if(type == 'dsa'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.DSA=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET DSA=?
+                        WHERE donor_number=?")
     
   }
   
@@ -1033,7 +1033,7 @@ getMFIvals<-function(con, p_itl, testNums){
     'DPA1*01:03,DPB1*04:01' = 'DPB1*04:01',
     'DPA1*01:03,DPB1*04:02' = 'DPB1*04:02'
   )
-
+  
   res<-res %>%
     mutate(antigen = recode(allele, !!!agSpecific, .default = antigen)) %>%
     filter(probe_id != '')
