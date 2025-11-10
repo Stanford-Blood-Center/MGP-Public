@@ -114,20 +114,18 @@ responsible for building this file.  It is built in to the application to speed
 up program load times, particularly for the Docker container (which cannot
 cache files between executions).
 
-The R script calls BLAASD (Build Loci Amino Acid Specific Dataframe), which
+The R script calls HLAtools::buildAlignments(), which
 extracts alignment sequence information for a given locus from the
 ANHIG/IMGTHLA GitHub repository to produce a dataframe of individual amino acid
 positions for all alleles, for a user-defined HLA locus or loci.
 
-The code block for BLAASD is derived from the HLAtools R package. Future 
-versions of MGP may directly call HLAtools::buildAlignments().
+We acknowledge the Mack Laboratory at UCSF for the usage of buildAlignments():
 
-We acknowledge the Mack Laboratory at UCSF for the usage of BLAASD:
-
-Livia Tran, Ryan Nickens, Leamon Crooms IV, Derek Pappas, Vinh Luu, Josh Bredeweg,
-Steven Mack, HLAtools: Toolkit for HLA Immunogenomics.
-https://CRAN.R-project.org/package=HLAtools
-
+Tran L, Nickens R, Luu V, Petersdorf EW, Mack SJ. HLAtools, Searching Shared HLA
+Amino Acid Residue Prevalence, and the Global Frequency Browsers: New 
+Computational Resources for Working With HLA Data and Visualizing Global 
+Patterns of HLA Variation. Int J Immunogenet. 2025 Dec;52(6):358-370. 
+doi: 10.1111/iji.70013. Epub 2025 Sep 14. PMID: 40947766; PMCID: PMC12595587.
 
 We acknowledge the following publications describing the IPG-IMGT/HLA Database:
 
@@ -458,9 +456,6 @@ app](https://github.com/user-attachments/assets/2ca3f634-3dd6-43ce-9051-18c3cfd5
 # Copyright & Licensing
 
 Match Grade Populator is © Stanford Blood Center, LLC.
-
-The file `functions/BLAASD.R` is © 2020 The Regents of the University of
-California.
 
 The copyrightable parts of the IPD-IMGT/HLA database are covered under the
 Creative Commons Attribution-NoDerivs License.  Read the [IPD-IMGT/HLA License
