@@ -28,12 +28,13 @@ dbConn <- function(){
 #extract Match Grade data for recipient ITL entered
 getMatchGrade<-function(con, r_itl){
   
-  mg_res<-dbGetQuery(con, paste("SELECT * 
+  mg_res<-dbGetQuery(con, paste("SELECT recipient_number, donor_number, mismatch_hvg, mismatch_gvh, a_1, a_2, b_1, b_2, c_1, c_2, dr_1, dr_2, drp_1, drp_2, dqb_1, dqb_2, dqa_1, dqa_2, dpa_1, dpa_2, dpb_1, dpb_2, DSA, ABCDRDQ_alleles, ABCDRDQ_match, ABCDRB1_alleles, ABCDRB1_match, ABCDRB1_mm_GVH, ABCDRB1_mm_HVG, DRB345DQDP_alleles, DRB345DQDP_match, DRB345DQDP_mm_GVH, DRB345DQDP_mm_HVG, DRB345DQDP_mm_TCE, Seven_loci_alleles, seven_loci_match, sample_number
                                     FROM Match_grades 
                                     WHERE recipient_number = ", r_itl, sep = ""))
   
   return(mg_res)
 }
+
 
 #extract available donors for evaluation
 getDonors<-function(mg_df){

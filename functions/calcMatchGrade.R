@@ -247,7 +247,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
 
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       
-      return(list('TRUE', d_mg[c(36:49)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm, DSAmessage))
+      return(list('TRUE', d_mg[c(23:36)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm, DSAmessage))
       
     },
     error = function(e){
