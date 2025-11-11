@@ -15,6 +15,8 @@ Epitope permissibility for DPB1 mismatched alleles.
 # How it works
 Note: MGP is currently only compatible with mTilda. MGP integration with 
 other Laboratory Information Management Systems (LIMS) will require code changes.
+A **demo mode** is available, for sites that do not want to immediately connect
+MGP to their LIMS.  (See the *How to Run* section for information on demo mode.)
 
 On start up, MGP prompts the user for a mTilda username upon start-up. 
 
@@ -104,6 +106,12 @@ driver will be the Microsoft [ODBC Driver for SQL
 Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver17).
 Note that **you must use Driver 17**, as Driver 18's defaults cause issues.
 
+If you are running MGP in demo mode, no ODBC configuration or driver is needed.
+MGP will use the included [SQLite](https://www.sqlite.org/index.html)
+demonstration database, which MGP will connect to using the
+[RSQLite](https://cran.r-project.org/web/packages/RSQLite/vignettes/RSQLite.html)
+R package.
+
 ## Reference Databases
 
 The `alignments.rda` file in the `ref` directories come from the ["Alignments"
@@ -143,13 +151,26 @@ sequence database for the human major histocompatibility complex, *Tissue
 Antigens*, March 2000, Volume 55, Issue 3, Pages 280-287,
 [https://doi.org/10.1034/j.1399-0039.2000.550314.x](https://doi.org/10.1034/j.1399-0039.2000.550314.x).
 
+## Demonstration Data
+
+To operate Demo Mode, MGP includes a demonstration database, allowing
+prospective users to try MGP without connecting to a real mTilda database.
+The `demo-db-data-dump.sql` file in the `demo-db` directory contains a
+SQLite-formatted SQL dump, which is converted into a SQLite3 database when the
+application is built.
+
+The SQL dump contains the minimum required schema for MGP's use, and includes
+three fake patients, each with one test.  Two user accounts are included, one
+representing a lab tech and one representing a supervisor.
+
 # How to Build
 
 Even though MGP is an R app, and does not need to be "compiled" in the way that
 a Java program is compiled, the app still must be "built": It has a number of
 dependencies—Shiny, for example—which must be downloaded and installed.  At
 least one of those dependencies (the `odbc` package) depends on an ODBC library.
-And R modules themselves are often compiled.
+And R modules themselves are often compiled.  Finally, the demonstration
+database must be created.
 
 There are three ways to build MGP.  From easiest to hardest the options are…
 
@@ -207,7 +228,7 @@ probably not worth it.
 These instructions will be fairly generic.  Converting the generic instructions
 to specific instructions is left as an exercise for the reader.
 
-1. Download and install R and renv.
+1. Download & install R, renv, and sqlite3.
 
 2. Install all of the libraries listed in the *Requirements* section.  Ensure
    that both the library *and the header files* are available.
@@ -217,7 +238,43 @@ to specific instructions is left as an exercise for the reader.
 4. Run `renv restore`.  This will download and build the R pacakges.  Expect it
    to take some time.
 
+5. `cd` to the `demo-db` directory.
+
+6. Run `sqlite3 mgp-demo.db`.  When the `sqlite>` prompt appears, run `.read
+   demo-db-data-dump.sql` to create the demonstration database (this should
+   only take a few seconds).  When the `sqlite>` prompt reappears, run the
+   `.quit` command to exit the SQLite3 command-line.
+
 You should now have an R environment that is ready to run MGP.
+
+### Note on Demo Mode
+
+If you build MGP from source and plan to run demo mode, you will need to set a
+couple of environment variables to *exact*, *case-sensitive* values.  When
+building a container, the build process sets the environment variables to
+default values that can enable demo mode; when building from source, you must
+set the environment variables yourself.
+
+To enable demo mode when building from source, set the following environment
+variables (remember the values are *case-sensitive*):
+
+* Set `SERVER` to "127.0.0.1".
+
+* Set `DB` to "noDB".
+
+* Set `DB_USERNAME` to "noUsername".
+
+* Set `DB_PW` to "noPassword".
+
+* Set `DRIVER` to "ODBC Driver 17 for SQL Server".
+
+You must also set `TZ` to a valid canonical [tz database time
+zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) (such as
+"America/Los\_Angeles"), and you must set `MAINTAINER_EMAIL` to a valid email
+address.
+
+Finally, `INSTITUTION_ID` must also be set, but it can be set to any valid
+string.
 
 # How to Run
 
@@ -233,6 +290,45 @@ container inside ShinyProxy ensures the application code and configuration are
 kept off of end-user machines.  In addition, ShinyProxy likely supports your
 site's authentication system, and is also able to use "Social Auth" (like
 Google) as a fallback.
+
+## Demo Mode
+
+In addition to running MGP with your mTilda database, it is also possible to
+run MGP in "Demo Mode", using the built-in demonstration database.
+
+To run in demo mode, simply run MGP with minimal configuration changes.  In
+particular:
+
+1. Leave the `DRIVER`, `SERVER`, `DB`, `DB_USERNAME`, and `DB_PW` environment
+   variables alone.  They will use the defaults set at the time the container
+   was built (or, if you built from source, the values you set for demo mode).
+
+2. Optionally, set the `TZ`, `MAINTAINER_EMAIL`, and `INSTITUTION_ID`
+   environment variables to appropriate values for your site.  (If you built
+   from source, there are no defaults, so these *must* be set.)
+
+Start MGP.  MGP will recognize that it is using the default database
+configuration, and will connect to the built-in SQLite3 demonstration database.
+
+To use MGP in demo mode, first choose from one of two "mTilda usernames":
+
+* `s_user` is a demonstration Supervisor.
+
+* `t_user` is a demonstration Lab Tech.
+
+Log in to MGP with one of those usernames, and then choose from one of the
+following three Patient ITLs:
+
+* `518049` is associated with donor "Rusty Rebellion", who has a tetanus
+  infection that makes him temporarily unsuitable as a donor.
+
+* `374915` is associated with donor "Chicken Strout", who has CNS (Chronic
+  Noodle Syndrome).
+
+* `869146` is associated with donor "Thelma Tran", a universal donor.
+
+Once you have finished using demo mode, read on for instructions on how to
+connect to your mTilda database, starting with the ODBC driver.
 
 ## ODBC Driver
 
