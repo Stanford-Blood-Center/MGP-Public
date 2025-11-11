@@ -4,3 +4,4 @@
 .Ruserdata
 *.swp
 setenvvar.R
+demo-db/mgp-demo.db
