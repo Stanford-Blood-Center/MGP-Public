@@ -59,8 +59,9 @@ server <- function(input, output, session) {
   observeEvent(input$validate, {
     
     con <- dbConn()
-    
+    on.exit(dbDisconnect(con))
     username_validation <- dbGetQuery(con, sprintf("select * from Staff where user_id = '%s'", input$username))
+    
     username$creds <- username_validation$security_level
     
     if(nrow(username_validation)!=0){
@@ -70,6 +71,7 @@ server <- function(input, output, session) {
     } else{
       output$username_not_found<-renderText('The entered mTtilda username was not found. Please try again.')
     }
+  
   })
   
   #clear button logic
@@ -110,16 +112,16 @@ server <- function(input, output, session) {
     }
     
     con <- dbConn()
+    on.exit(dbDisconnect(con))
     
     mg_res <- dbGetQuery(con, paste("SELECT mg.*, p.last_name, p.first_name FROM Match_grades mg
                                      LEFT JOIN Patients p
                                      ON mg.donor_number = p.patient_number
                                      WHERE mg.recipient_number = ", input$p_itl))
-    
+
     if(nrow(mg_res)==0){
       output$p_check <- renderText({'No patients were found with the input ITL. Please make sure the input patient ITL is correct and that it was imported into Match Grade.'})
       disable('p_itl') 
-      dbDisconnect(con)
       return()
     } else{ 
       
@@ -137,9 +139,6 @@ server <- function(input, output, session) {
           selectInput('d_itl', 'Donor Selection', choices=c("Nothing selected", donorEntry), multiple = FALSE)
         )})
     }
-    
-    dbDisconnect(con)
-    
   })
   
   patient<-reactiveValues(itl=NULL)
@@ -178,6 +177,7 @@ server <- function(input, output, session) {
     show_spinner()
     
     con<-dbConn()
+    on.exit(dbDisconnect(con))
     
     #set up log file
     hla$log<-tempfile(tmpdir=tempdir(),pattern = paste("MG_", patient$itl, '_', sep=""), fileext = ".log")

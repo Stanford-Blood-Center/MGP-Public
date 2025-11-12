@@ -15,6 +15,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
       errorMessage<-NULL
       
       con<-dbConn()
+      on.exit(dbDisconnect(con))
       
       #get recipient's called antibodies
       sample_num<-getSampleNumber(con, r_itl)
