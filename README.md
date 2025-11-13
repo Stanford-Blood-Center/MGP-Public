@@ -160,8 +160,44 @@ SQLite-formatted SQL dump, which is converted into a SQLite3 database when the
 application is built.
 
 The SQL dump contains the minimum required schema for MGP's use, and includes
-three fake patients, each with one test.  Two user accounts are included, one
-representing a lab tech and one representing a supervisor.
+three fake patients, each with one set of antibody screening tests (IgG Class I
+and IgG Class II), and one fake donor per patient. Two user credentials are 
+included, one representing a lab tech and one representing a supervisor.
+
+The `Patients` table contains patient information. It is only used to derive the
+donor's first and last name, which are displayed in a drop down during donor 
+selection. Thus, recipient ITLs are not included. 
+
+The `Match_grades` table contains recipient and donor typing, as well as 
+columns for calculations used in compatibility assessment. Outside of demo mode, 
+the `Match_grades` table corresponds with the Match Grade software user
+interface.
+There are two rows per patient in the demo database. 
+
+1. Rows where the `recipient_number` value is equal to the `donor_number` value 
+indicate the patient's typing. The `sample_number` column will be populated with
+the sample number that should be used for DSA evaluation. 
+
+2. Rows where the `recipient_number` value is not equal to the `donor_number`
+value indicate the donor's typing. Recipient-donor compatibility evaluation 
+columns will be populated in ‘**Calculation**’ mode for these rows.
+
+The `Patient_tests` table contains patient tests. The `sample_number` from the
+`Match_grades` table is used to query the `Patient_tests` table to obtain 
+billable Class I and Class II IgG test numbers for DSA evaluation.
+
+The `Luminex_SA_bead_detail` table contains MFI values for all beads tested for 
+IgG Class I and Class II tests. This table is used to derive MFI values for
+HvG mismatched alleles during the DSA evaluation process. If the HvG mismatched 
+allele has an MFI value greater than 1000 but less than 2000, it is considered a 
+potential weak DSA. If the MFI value is greater than 2000, it is considered 
+a potential DSA.
+
+The `Screening_results` table contains called antibodies for IgG Class I and 
+Class II tests. MGP checks if potential DSAs were called as antibodies for 
+patient tests. If the potential DSA or associated antigen group was called,
+it is considered true DSA. Otherwise, it is considered false positive. This
+secondary check is to ensure hyper-reactive beads are not considered DSA. 
 
 # How to Get
 
