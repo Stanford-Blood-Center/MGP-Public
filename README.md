@@ -348,13 +348,11 @@ To use MGP in demo mode, first choose from one of two "mTilda usernames":
 Log in to MGP with one of those usernames, and then choose from one of the
 following three Patient ITLs:
 
-* `518049` is associated with donor "Rusty Rebellion", who has a tetanus
-  infection that makes him temporarily unsuitable as a donor.
+* `518049` is associated with donor "Rusty Rebellon".
 
-* `374915` is associated with donor "Chicken Strout", who has CNS (Chronic
-  Noodle Syndrome).
+* `374915` is associated with donor "Chicken Strout".
 
-* `869146` is associated with donor "Thelma Tran", a universal donor.
+* `869146` is associated with donor "Thelma Tran".
 
 Once you have finished using demo mode, read on for instructions on how to
 connect to your mTilda database, starting with the ODBC driver.
