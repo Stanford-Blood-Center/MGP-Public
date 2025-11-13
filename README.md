@@ -180,7 +180,7 @@ Container Image".
 The two "container image" methods both require Docker, or an alternative
 container engine.  If you plan on running MGP on your computer (desktop,
 laptop, etc.), we recommend installing [Docker
-Desktop](https://www.docker.com/desktop/), however other altneratives are
+Desktop](https://www.docker.com/desktop/), however other alternatives are
 available.  We also recommend that you *check with your local IT support*
 before installing programs on a work-owned computer; they might do the
 installation for you, or they might recommend something better.
