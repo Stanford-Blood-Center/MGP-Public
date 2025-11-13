@@ -174,11 +174,22 @@ database must be created.
 
 There are three ways to build MGP.  From easiest to hardest the options are…
 
-1. You can use Docker
+1. You can use GitHub Actions
 
-2. You can use GitHub Actions
+2. You can use Docker
 
 3. You can build from source.
+
+## GitHub Actions
+
+This repository includes a GitHub Actions workflow which will run any time
+there is a push.  The workflow builds the container image, making it available
+in the repository's *Packages* area.  Click on the package name to view
+instructions on how to pull the container image.
+
+You should expect your container image's name to be based on the GitHub repo
+and branch names.  For example, if your repo is named "matchgrade" and the
+branch name is "sbc", the container image will be tagged "matchgrade:sbc".
 
 ## Docker
 
@@ -207,17 +218,6 @@ this is your latest build of the MGP container image.
 Here is a demo of building the container image on a macOS system:
 
 [![asciicast](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1.svg)](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1)
-
-## GitHub Actions
-
-This repository includes a GitHub Actions workflow which will run any time
-there is a push.  The workflow builds the container image, making it available
-in the repository's *Packages* area.  Click on the package name to view
-instructions on how to pull the container image.
-
-You should expect your container image's name to be based on the GitHub repo
-and branch names.  For example, if your repo is named "matchgrade" and the
-branch name is "sbc", the container image will be tagged "matchgrade:sbc".
 
 ## Building from Source
 
