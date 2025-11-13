@@ -163,59 +163,88 @@ The SQL dump contains the minimum required schema for MGP's use, and includes
 three fake patients, each with one test.  Two user accounts are included, one
 representing a lab tech and one representing a supervisor.
 
-# How to Build
+# How to Get
 
-Even though MGP is an R app, and does not need to be "compiled" in the way that
-a Java program is compiled, the app still must be "built": It has a number of
-dependencies—Shiny, for example—which must be downloaded and installed.  At
-least one of those dependencies (the `odbc` package) depends on an ODBC library.
-And R modules themselves are often compiled.  Finally, the demonstration
-database must be created.
+There are three ways to get MGP.  From easiest to hardest, they are…
 
-There are three ways to build MGP.  From easiest to hardest the options are…
+1. Get a ready-made container image from this repository.
 
-1. You can use GitHub Actions
+2. Build a container image yourself
 
-2. You can use Docker
+3. Build MGP from source, without a container image
 
-3. You can build from source.
+**MGP is meant to be run as a web site, on a server.**  If you want just want
+to try out MGP (for example, in demo mode), we recommend using the "Ready-Made
+Container Image".
 
-## GitHub Actions
+The two "container image" methods both require Docker, or an alternative
+container engine.  If you plan on running MGP on your computer (desktop,
+laptop, etc.), we recommend installing [Docker
+Desktop](https://www.docker.com/desktop/), however other altneratives are
+available.  We also recommend that you *check with your local IT support*
+before installing programs on a work-owned computer; they might do the
+installation for you, or they might recommend something better.
 
-This repository includes a GitHub Actions workflow which will run any time
-there is a push.  The workflow builds the container image, making it available
-in the repository's *Packages* area.  Click on the package name to view
-instructions on how to pull the container image.
+For more information on Docker Desktop, see the [Docker Desktop
+documentation](https://docs.docker.com/desktop/), in particular the *Setup*
+section and the *Explore Docker Desktop* section.  MGP does not require
+anything special from Docker Desktop, so the default installation options are
+fine.  Once Docker Desktop is running, you can use the Docker terminal to fetch
+(or build) an MGP container image.
 
-You should expect your container image's name to be based on the GitHub repo
-and branch names.  For example, if your repo is named "matchgrade" and the
-branch name is "sbc", the container image will be tagged "matchgrade:sbc".
+## Ready-Made Container Image
 
-## Docker
+To fetch a ready-made container image from the Stanford Blood Center's MGP
+repository, run this command in the Docker terminal:
 
-The easiest way of building MGP is to use the Dockerfile.  The container
-image uses base images from the [Rocker Project](https://rocker-project.org),
-which provides a R installation built on top of Ubuntu.
-The Dockerfile then installs the non-R libraries, installs renv, and hands off
-to renv for R package installation.
+```
+docker pull --platform linux/amd64 ghcr.io/stanford-blood-center/mgp-public:main
+```
 
-To build the docker image, follow these steps:
+GitHub provides a free service—GitHub Actions—which can be used for building
+things like container images.  This repository includes a GitHub Actions
+workflow which will run any time changes are pushed to the repository.  The
+workflow builds the container image, making it available in the repository's
+*Packages* area.  The command shown above fetches the image that was built
+using the GitHub Actions workflow.
 
-1. Download & install Docker (or a compatible Docker-alike).
+Once the container is fetched, you will see it appear in the Docker Desktop
+*Images* list, with name "ghcr.io/stanford-blood-center/mgp-public:main" and
+tag "main".
 
-2. Download (or clone) a copy of this Git repository.
+## Build a container image yourself
 
-3. Run the following command: `docker buildx build --platform linux/amd64 --tag mgp .`
+If you do not want to rely on GitHub, you can build a container image
+yourself.  *This method requires intermediate IT skills.*
 
-   The `--platform linux/amd64` portion of the command ensures that the build
-   runs on 64-bit Linux on Intel/AMD CPUs, even if you are running the build
-   from a Mac.  Native builds on the ARM platform are not available right now.
+First, you must get a copy of this repository's contents: If you go to this
+repository's page on GitHub, and click on the green `<> Code` button, you will
+have an option to download a ZIP file of the repository.  Download the ZIP
+file, and unpack it on your computer.  If you know how to use Git, you may
+instead clone the repository.
 
-After the container build completes, you will have a container image named
-(or "tagged") "mgp".  More specifically, it will be tagged "mgp:latest", as
-this is your latest build of the MGP container image.
+Using the Docker terminal inside Docker desktop, change to unpacked directory
+and then run the following command:
 
-Here is a demo of building the container image on a macOS system:
+```
+docker buildx build --platform linux/amd64 --tag mgp .
+```
+
+The `Dockerfile` file in the repository contains the instructions that Docker
+(or a similar program) uses to build a container image.  Docker will start
+by using a pre-built 'base' container image from the [Rocker
+Project](https://rocker-project.org); this image contains a basic Linux
+distribution, along with the R and renv versions that we need.
+
+Using the base image, Docker will install the remaining prerequisites, as well
+as MGP's code.  The process will take time (potentially tens of minutes) to
+complete.
+
+After the container build completes, you will see it appear in the Docker
+Desktop *Images* list, with name "mgp" and tag "latest".
+
+Here is a demo of building the container image on a macOS system, to give you
+an idea of the messages that will appear during the build process:
 
 [![asciicast](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1.svg)](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1)
 
@@ -223,7 +252,7 @@ Here is a demo of building the container image on a macOS system:
 
 Building MGP from source is only really useful if you plan on doing development
 work on MGP.  If you are just trying to use MGP, then building from source is
-probably not worth it.
+probably not worth it.  **Advanced IT and R skills are required.**
 
 These instructions will be fairly generic.  Converting the generic instructions
 to specific instructions is left as an exercise for the reader.
