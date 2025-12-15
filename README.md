@@ -343,12 +343,16 @@ string.
 
 # How to Run
 
-Once you have "built" MGP, you need to run it!  To do so, you first need to
-identify which ODBC driver you will be using.  Then, you need to set
-environment variables.  Finally, you can run MGP according to how you built it.
+Once you have "built" MGP, you need to run it!  How you run it depends on how
+you got it.
 
-*For multi-user use, we recommend using
-[ShinyProxy](https://www.shinyproxy.io)*: For MGP to work, it needs read access
+If you are only interested in exploring MGP, **demo mode can be used without
+ShinyProxy, and without connecting to mTilda.**  If you are just looking to
+explore MGP, you can run demo mode locally, on your computer.  The next section
+explains how to run demo mode locally, on your computer.
+
+**For multi-user & production use, we recommend using
+[ShinyProxy](https://www.shinyproxy.io)**: For MGP to work, it needs read access
 to the mTilda database.  That means MGP needs access to database credentials,
 and those should not be kept on end-user machines.  Running the MGP Docker
 container inside ShinyProxy ensures the application code and configuration are
@@ -356,26 +360,47 @@ kept off of end-user machines.  In addition, ShinyProxy likely supports your
 site's authentication system, and is also able to use "Social Auth" (like
 Google) as a fallback.
 
-## Demo Mode
+*Installing ShinyProxy is outside the scope of this guide.*  The sub-section
+"Running in ShinyProxy" (near the end of this document) provides instructions
+on how to use MGP inside ShinyProxy, but it is up to you to configure
+ShinyProxy with the authentication, logging, etc. that is necessary for your
+site.  We recommend that you work with your local IT support to set up
+ShinyProxy and deploy MGP.
 
-In addition to running MGP with your mTilda database, it is also possible to
-run MGP in "Demo Mode", using the built-in demonstration database.
+## Demo Mode locally, on your computer
 
-To run in demo mode, simply run MGP with minimal configuration changes.  In
-particular:
+To run demo mode locally, you are probably using a ready-made container image,
+and you are probably using Docker Desktop.  If you are, then the command to run
+MGP Demo Mode is very similar to the command you used to get the ready-made
+container image.
 
-1. Leave the `DRIVER`, `SERVER`, `DB`, `DB_USERNAME`, and `DB_PW` environment
-   variables alone.  They will use the defaults set at the time the container
-   was built (or, if you built from source, the values you set for demo mode).
+```
+docker run --rm --publish 3838:3838 --platform linux/amd64 ghcr.io/stanford-blood-center/mgp:main
+```
 
-2. Optionally, set the `TZ`, `MAINTAINER_EMAIL`, and `INSTITUTION_ID`
-   environment variables to appropriate values for your site.  (If you built
-   from source, there are no defaults, so these *must* be set.)
+If you build the container image yourself, assuming you used the tag "mgp",
+then the command to run MGP Demo Mode is this:
 
-Start MGP.  MGP will recognize that it is using the default database
-configuration, and will connect to the built-in SQLite3 demonstration database.
+```
+docker run --rm --publish 3838:3838 --platform linux/amd64 mgp
+```
 
-To use MGP in demo mode, first choose from one of two "mTilda usernames":
+Here is an example of the command being run in a terminal window, along with
+the messages that can appear:
+
+![A terminal window showing the output of the docker run command](https://github.com/user-attachments/assets/aea3b0c0-4f02-4dd8-8440-d7e230869b54)
+
+When you see the message "Listening on http://0.0.0.0:3838", pull up a web
+browser and go to [http://localhost:3838](http://localhost:3838).  You should
+see a prompt for a mTilda username, followed by a prompt for an ITL.
+
+### Demo Mode accounts & donors
+
+Since you started MGP with no additional configuration, it will automatically
+start up in demo mode.
+
+Since demo mode is not connected to a real mTilda database, the demonstration
+database includes two mTilda usernames:
 
 * `s_user` is a demonstration Supervisor.
 
@@ -390,11 +415,21 @@ following three Patient ITLs:
 
 * `869146` is associated with donor "Thelma Tran".
 
-The rest of the instructions on this page are only useful if you are not using
-Demo Mode.
+Once you have logged in, entered an ITL, and selected a donor, the match grade
+evaluation will run.  The results will be displayed on the web page, with
+detailed logs being displayed in the terminal window.
+
+Here is an example of the terminal window showing part of the logs from the
+match grade evaluation, in front of the web browser showing match grade results:
+
+![A terminal window showing the output of the docker run command](https://github.com/user-attachments/assets/f99f271e-6a26-466d-adf6-e67ddc010478)
+
+When you are done using MGP, close the web browser and the terminal window.
+You may also close Docker Desktop.
 
 ## Environment Variables
 
+If you have decided to not run MGP in demo mode, you will need to configure it.
 MGP is configured using environment variables.  The exact method of setting
 environment variables depends on your operating system and how you are going to
 run MGP.
