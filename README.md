@@ -390,37 +390,8 @@ following three Patient ITLs:
 
 * `869146` is associated with donor "Thelma Tran".
 
-Once you have finished using demo mode, read on for instructions on how to
-connect to your mTilda database, starting with the ODBC driver.
-
-## ODBC Driver
-
-To configure MGP, you need to tell it which ODBC driver to use.
-If you are using the Docker container, you can skip this step.
-
-The ODBC driver manager provides a list of drivers, either in an app or in an
-INI file.
-
-For example, here is the contents of the `odbcinst.ini` file on a macOS system,
-after installing the Microsoft ODBC Driver for SQL Server, version 17:
-
-```
-$ cat /opt/local/etc/odbcinst.ini
-[ODBC Driver 17 for SQL Server]
-Description=Microsoft ODBC Driver 17 for SQL Server
-Driver=/opt/local/lib/libmsodbcsql.17.dylib
-UsageCount=1
-```
-
-On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
-On Windows, the information is available through the *ODBC Data Source
-Administrator* application, in the *Drivers* tab.
-
-![The "Drivers" tab of the Windows "ODBC Data Sourace Administrator"
-application](https://github.com/user-attachments/assets/913a78ef-f008-432a-bb3f-b327b91fe513)
-
-You will need to identify the name of the ODBC driver to use, and then set the
-appropriate environment variable.
+The rest of the instructions on this page are only useful if you are not using
+Demo Mode.
 
 ## Environment Variables
 
@@ -428,54 +399,59 @@ MGP is configured using environment variables.  The exact method of setting
 environment variables depends on your operating system and how you are going to
 run MGP.
 
-Here are the environment variables you need to set:
+Most environment variables are required, but not always.  For example, if you
+run Demo Mode, most environment variables do not need to be set.  Assume that
+an environment variable needs to be set, unless you are told otherwise.
 
-* Name: `DRIVER`
-
-  Derscription: The name of the ODBC Driver to use for connecting to the
-  database.  This should be the name of a driver from the `odbcinst.ini`
-  configuration file.  For example, "ODBC Driver 17 for SQL Server".
-
-  If you are using the Docker container, this environment variable is already
-  set for you in the container, so you should ignore it.
+Here are the environment variables:
 
 * Name: `SERVER`
 
   Description: The hostname or IP address of the SQL Server.
 
+  If you are running Demo Mode, do not set this variable.
+
 * Name: `DB`
 
   Description: The name of the SQL Server database.
+
+  If you are running Demo Mode, *and* you built MGP from source, set this to
+  `noDB`.  If you are running Demo mode, and are using a Docker container
+  (either one you built yourself, or one from GitHub), do not set this variable.
 
 * Name: `DB_USERNAME`
 
   Description: A username with read-only access to the database.
 
+  If you are running Demo Mode, do not set this variable.
+
 * Name: `DB_PW`
 
   Description: The password for `DB_USERNAME`.
+
+  If you are running Demo Mode, do not set this variable.
 
 * Name: `TZ`
 
   Description: The time zone to use for log messages.
 
-  For the `TZ` environment variable, you should set it to a Canonical TZ
-  identifier from the [List of tz database time
+  You should set this to a Canonical TZ identifier from the [List of tz
+  database time
   zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).  For
-  example, if your machine uses Japan Standard Time, set the `TZ` environment
-  variable to `Asia/Tokyo`.  If you try setting it to `Tokyo`, which is not a
-  Canonical identifier, things will break.
+  example, if you use Japan Standard Time, set the `TZ` environment variable to
+  `Asia/Tokyo`.  If you try setting it to `Tokyo`, which is not a Canonical
+  identifier, things will break.
 
-  If you do not set the `TZ` environment variable, the behavior depends on how
-  you run MGP: MGP may automatically use the system time zone, or it may fall
-  back to UTC.
+  This environment variable is optional, but if you do not set it, the behavior
+  depends on how you run MGP: MGP may automatically use the system time zone,
+  or it may fall back to UTC.
 
 * Name: `MAINTAINER_EMAIL`
 
   Description: The email address of the person who maintains this installation
   of MGP.
 
-  If you do not set the `MAINTAINER_EMAIL` environment variable, the string
+  This environment variable is optional, but if you do not set it, the string
   `maintaneremail@placeholder.com` will be used instead.
 
 * Name: `INSTITUTION_ID`
@@ -483,11 +459,23 @@ Here are the environment variables you need to set:
   Description: The term that your site uses to refer to usernames.  At Stanford
   University, this is "SUNetID".
 
-  If you do not set the `INSTITUTION_ID` environment variable, the string
+  This environment variable is optional, but if you do not set it, the string
   "Instituion ID" will be used instead.
 
-The `TX`, `MAINTAINER_EMAIL`, and `INSTITUTION_ID` environment variables are
-optional; all others are required.
+* Name: `DRIVER`
+
+  Derscription: The name of the ODBC Driver to use for connecting to the
+  database.  This should be the name of a driver from the `odbcinst.ini`
+  configuration file (on macOS and Linux), or from the *ODBC Data Source
+  Administrator* application (on Windows).  For example, "ODBC Driver 17 for
+  SQL Server".
+
+  You only need to set this environment variable if you used the *Building from
+  Source* instructions.  For information on how to set this environment
+  variable, see the section *Running from Source*.
+
+  If you are using a Docker container (either one you built yourself, or one
+  from GitHub), do not set this variable.
 
 ## Running with Docker
 
@@ -558,7 +546,46 @@ repository's `renv` directory should now contain lots of files, representing
 the R packages that renv installed.
 
 Make sure you have set the environment variables.  Since you are not using the
-Docker container, you *will* need to set the `DRIVER` environment variable.
+Docker container, you *will* need to set the `DRIVER` environment variable:
+
+### Configuring the ODBC Driver
+
+To configure a non-container MGP, you need to tell it which ODBC driver to use.
+
+The ODBC driver manager provides a list of drivers, either in an app or in an
+INI file.
+
+For example, here is the contents of the `odbcinst.ini` file on a macOS system,
+after installing the Microsoft ODBC Driver for SQL Server, version 17:
+
+```
+$ cat /opt/local/etc/odbcinst.ini
+[ODBC Driver 17 for SQL Server]
+Description=Microsoft ODBC Driver 17 for SQL Server
+Driver=/opt/local/lib/libmsodbcsql.17.dylib
+UsageCount=1
+```
+
+On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
+On Windows, the information is available through the *ODBC Data Source
+Administrator* application, in the *Drivers* tab.
+
+![The "Drivers" tab of the Windows "ODBC Data Sourace Administrator"
+application](https://github.com/user-attachments/assets/913a78ef-f008-432a-bb3f-b327b91fe513)
+
+You will need to identify the name of the ODBC driver to use, and then set the
+`DRIVER` environment variable to the name of the ODBC driver that you will be
+using.  On macOS and Linux, this will likely be `"ODBC Driver 17 for SQL
+Server"`; on Windows, this could be `"ODBC Driver 17 for SQL Server"` or `"SQL
+Server"`.
+
+Remember, **ODBC Driver 18** is not compatible with mTilda at this time, so you
+should continue to use the Microsoft ODBC Driver 17.
+
+### Running MGP
+
+With the final environment variable (`DRIVER`) configured, you can now proceed
+to running MGP.
 
 To run the application, run the command `renv run app.R`.  After a short delay,
 you should see the message `Listening on http://127.0.0.1:7346` (though you may
