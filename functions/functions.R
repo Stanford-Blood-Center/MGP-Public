@@ -1,6 +1,6 @@
 #external functions
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.9
+#v 1.13.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -979,6 +979,18 @@ getSampleNumber<-function(con, r_itl){
   
   return(res)
   
+}
+
+#get draw date for sample number to display in review mode
+getDSADrawDate<-function(con, sample_number){ 
+  
+  res<-dbGetQuery(con, sprintf('SELECT draw_date
+                               FROM Patient_samples
+                               WHERE sample_number = %s', sample_number))  
+  
+  draw_date <- format(res$draw_date, format = "%Y-%m-%d %I:%M:%S %p")
+  
+  return(draw_date)
 }
 
 #get test numbers for IgG where tests are billable

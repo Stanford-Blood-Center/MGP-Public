@@ -1,5 +1,5 @@
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.9
+#v 1.13.0
 
 options(warn = 2) 
 
@@ -28,6 +28,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
       #field is not to be populated if only C1Q was ordered for a patient
       if(is.na(sample_num)){
         calculateDSA<-'Unknown'
+        dsaDrawDate<-NULL
       } else{
         #get IgG test numbers to get MFI values and AB screening results
         #for IgG specific tests
@@ -39,6 +40,9 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
           errorMessage<-'The selected DSA date in the Match Grade software does not have any associated IgG tests. Please check the selected DSA date.'
           stop('Selected DSA date does not have associated IgG tests')
         }
+        
+        # DSA draw date will only be returned in reviewer mode 
+        dsaDrawDate<-getDSADrawDate(con, sample_num)
         
         ab_results<-getAbResults(con, testNums)
         ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
@@ -57,7 +61,6 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
           
           #split any haplotypes into separate alleles
           #positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
-          
           mfi_vals<-getMFIvals(con, r_itl, testNums)
 
           #if value is blank for average value, all beads in that antigen group have
@@ -248,7 +251,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
 
       lgr$info(paste('*****Finished calculating Match Grade for donor ITL ', d_itl, '*****', sep=''))
       
-      return(list('TRUE', d_mg[c(23:36)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm, DSAmessage))
+      return(list('TRUE', d_mg[c(23:36)], final_missing_message, errorMessage, A_mm, B_mm, C_mm, DRB1_mm, DRB345_mm, DQA1_mm, DQB1_mm, DPA1_mm, DPB1_mm, DSAmessage, dsaDrawDate))
       
     },
     error = function(e){

@@ -1,5 +1,5 @@
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.9
+#v 1.13.0
 
 library(shiny)
 
@@ -8,8 +8,8 @@ executeMGPUI<- function(id, type) {
   ns <- NS(id)
   
   if(type == 'spinner'){
-    uiOutput(ns('spinner'))
-  } else{
+      uiOutput(ns("spinner"))  
+    } else{
     uiOutput(ns('log'))
   }
 }
@@ -37,7 +37,7 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, sy
           })
        } else if(creds %in% c('50', '60')){
         output$spinner <-renderUI({
-          tagList(uiOutput(ns('errorText')), uiOutput(ns('comparisonText')), uiOutput(ns('dsaMess')), uiOutput(ns('mgTable')), uiOutput(ns('mgPopulationTable')), uiOutput(ns('mmAlleles')))
+          tagList(uiOutput(ns('errorText')), uiOutput(ns('drawDate')), uiOutput(ns('comparisonText')), uiOutput(ns('dsaMess')), uiOutput(ns('mgTable')), uiOutput(ns('mgPopulationTable')), uiOutput(ns('mmAlleles')))
         })
        }
        
@@ -61,7 +61,8 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, sy
            mgp$DPA1_mm<-run_res[[12]]
            mgp$DPB1_mm<-run_res[[13]]
            mgp$dsainfo<-run_res[[14]]
-
+           mgp$dsaDrawDate<-run_res[[15]]
+           
            message<-paste('Match Grade evaluations for recipient ITL', patient, 'completed!')
            if(!is.null(mgp$missing_seq)){
              showModal(missingModal(mgp$missing_seq))
@@ -95,6 +96,15 @@ executeMGPServer<-function(id, creds, patient, donor, hlaRecipient, hlaDonor, sy
       
                                                      ##### REVIEW MODE OUTPUTS #####
     if(creds %in% c('50', '60')){
+      
+      output$drawDate <- renderUI({
+        req(mgp$result==TRUE)
+        tagList(
+          strong("Recipient DSA Date Selected"), 
+          br(),
+          span(mgp$dsaDrawDate)
+        )
+      })
       
       #difference comparison output
       output$comparisonText<-renderUI({
