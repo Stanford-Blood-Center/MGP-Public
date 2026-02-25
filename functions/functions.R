@@ -1224,8 +1224,11 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
               'DR-5103' = 'DR51'
             )
             surrogate<-DRmapping[[surrogate]]
-            #in case IgG test does not include new ExPlex beads (i.e. DRB3*01:02)
-            surrogate<-surrogate[surrogate %in% aspBeads]
+            # in case IgG test does not include new ExPlex beads (i.e. DRB3*01:02)
+            # DR51 is used as a surrogate for DR-5103. Concatenate DR51 when
+            # removing any surrogates that are not in the panel so it is not 
+            # filtered out
+            surrogate<-surrogate[surrogate %in% c(aspBeads, 'DR51')]
         }
         
         #use any(grepl()), just in case multiple surrogates are found for ASP beads
