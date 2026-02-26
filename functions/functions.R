@@ -1,6 +1,6 @@
 #external functions
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.12.9
+#v 1.13.0
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(tidyverse))
@@ -10,25 +10,31 @@ suppressPackageStartupMessages(library(rvest))
 
 dbConn <- function(){
   
-  con <- dbConnect(odbc(),
-                   Driver = Sys.getenv('DRIVER'),
-                   Server = Sys.getenv('SERVER'),
-                   Database = Sys.getenv('DB'),
-                   UID = Sys.getenv('DB_USERNAME'),
-                   PWD = Sys.getenv('DB_PW'))
-  
+  # use demo DB if MGP is deployed without a configured database 
+  if(Sys.getenv('DB') == 'noDB'){
+    con <- dbConnect(RSQLite::SQLite(), 'demo-db/mgp-demo.db')
+  } else{
+    con <- dbConnect(odbc(),
+                     Driver = Sys.getenv('DRIVER'),
+                     Server = Sys.getenv('SERVER'),
+                     Database = Sys.getenv('DB'),
+                     UID = Sys.getenv('DB_USERNAME'),
+                     PWD = Sys.getenv('DB_PW'))
+  }
+      
   return(con)
 }
 
 #extract Match Grade data for recipient ITL entered
 getMatchGrade<-function(con, r_itl){
   
-  mg_res<-dbGetQuery(con, paste("SELECT * 
+  mg_res<-dbGetQuery(con, paste("SELECT recipient_number, donor_number, mismatch_hvg, mismatch_gvh, a_1, a_2, b_1, b_2, c_1, c_2, dr_1, dr_2, drp_1, drp_2, dqb_1, dqb_2, dqa_1, dqa_2, dpa_1, dpa_2, dpb_1, dpb_2, DSA, ABCDRDQ_alleles, ABCDRDQ_match, ABCDRB1_alleles, ABCDRB1_match, ABCDRB1_mm_GVH, ABCDRB1_mm_HVG, DRB345DQDP_alleles, DRB345DQDP_match, DRB345DQDP_mm_GVH, DRB345DQDP_mm_HVG, DRB345DQDP_mm_TCE, Seven_loci_alleles, seven_loci_match, sample_number
                                     FROM Match_grades 
                                     WHERE recipient_number = ", r_itl, sep = ""))
   
   return(mg_res)
 }
+
 
 #extract available donors for evaluation
 getDonors<-function(mg_df){
@@ -250,20 +256,20 @@ updateMGtable<-function(connection, type, vals){
   #updating match columns
   if(type=='match'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.ABCDRDQ_match=?, 
-                            Match_grades.ABCDRDQ_alleles=?,
-                            Match_grades.ABCDRB1_match=?,
-                            Match_grades.ABCDRB1_alleles=?,
-                            Match_grades.ABCDRB1_mm_GVH=?,
-                            Match_grades.ABCDRB1_mm_HVG=?,
-                            Match_grades.DRB345DQDP_match=?,
-                            Match_grades.DRB345DQDP_alleles=?,
-                            Match_grades.DRB345DQDP_mm_GVH=?,
-                            Match_grades.DRB345DQDP_mm_HVG=?,
-                            Match_grades.Seven_loci_match=?,
-                            Match_grades.Seven_loci_alleles=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET ABCDRDQ_match=?, 
+                            ABCDRDQ_alleles=?,
+                            ABCDRB1_match=?,
+                            ABCDRB1_alleles=?,
+                            ABCDRB1_mm_GVH=?,
+                            ABCDRB1_mm_HVG=?,
+                            DRB345DQDP_match=?,
+                            DRB345DQDP_alleles=?,
+                            DRB345DQDP_mm_GVH=?,
+                            DRB345DQDP_mm_HVG=?,
+                            seven_loci_match=?,
+                            Seven_loci_alleles=?
+                        WHERE donor_number=?")
     
   }
   
@@ -271,17 +277,17 @@ updateMGtable<-function(connection, type, vals){
   #updating tce column
   if(type=='tce'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.DRB345DQDP_mm_TCE=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET DRB345DQDP_mm_TCE=?
+                        WHERE donor_number=?")
     
   }
   
   if(type == 'dsa'){
     
-    res<-dbSendStatement(connection, 'UPDATE Match_grades
-                        SET Match_grades.DSA=?
-                        WHERE Match_grades.donor_number=?')
+    res<-dbSendStatement(connection, "UPDATE Match_grades
+                        SET DSA=?
+                        WHERE donor_number=?")
     
   }
   
@@ -975,6 +981,18 @@ getSampleNumber<-function(con, r_itl){
   
 }
 
+#get draw date for sample number to display in review mode
+getDSADrawDate<-function(con, sample_number){ 
+  
+  res<-dbGetQuery(con, sprintf('SELECT draw_date
+                               FROM Patient_samples
+                               WHERE sample_number = %s', sample_number))  
+  
+  draw_date <- format(res$draw_date, format = "%Y-%m-%d %I:%M:%S %p")
+  
+  return(draw_date)
+}
+
 #get test numbers for IgG where tests are billable
 getIgGTestNums<-function(con, s_num){
   
@@ -1027,7 +1045,7 @@ getMFIvals<-function(con, p_itl, testNums){
     'DPA1*01:03,DPB1*04:01' = 'DPB1*04:01',
     'DPA1*01:03,DPB1*04:02' = 'DPB1*04:02'
   )
-
+  
   res<-res %>%
     mutate(antigen = recode(allele, !!!agSpecific, .default = antigen)) %>%
     filter(probe_id != '')
@@ -1206,8 +1224,11 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
               'DR-5103' = 'DR51'
             )
             surrogate<-DRmapping[[surrogate]]
-            #in case IgG test does not include new ExPlex beads (i.e. DRB3*01:02)
-            surrogate<-surrogate[surrogate %in% aspBeads]
+            # in case IgG test does not include new ExPlex beads (i.e. DRB3*01:02)
+            # DR51 is used as a surrogate for DR-5103. Concatenate DR51 when
+            # removing any surrogates that are not in the panel so it is not 
+            # filtered out
+            surrogate<-surrogate[surrogate %in% c(aspBeads, 'DR51')]
         }
         
         #use any(grepl()), just in case multiple surrogates are found for ASP beads

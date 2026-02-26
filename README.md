@@ -15,6 +15,8 @@ Epitope permissibility for DPB1 mismatched alleles.
 # How it works
 Note: MGP is currently only compatible with mTilda. MGP integration with 
 other Laboratory Information Management Systems (LIMS) will require code changes.
+A **demo mode** is available, for sites that do not want to immediately connect
+MGP to their LIMS.  (See the *How to Run* section for information on demo mode.)
 
 On start up, MGP prompts the user for a mTilda username upon start-up. 
 
@@ -104,6 +106,12 @@ driver will be the Microsoft [ODBC Driver for SQL
 Server](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver17).
 Note that **you must use Driver 17**, as Driver 18's defaults cause issues.
 
+If you are running MGP in demo mode, no ODBC configuration or driver is needed.
+MGP will use the included [SQLite](https://www.sqlite.org/index.html)
+demonstration database, which MGP will connect to using the
+[RSQLite](https://cran.r-project.org/web/packages/RSQLite/vignettes/RSQLite.html)
+R package.
+
 ## Reference Databases
 
 The `alignments.rda` file in the `ref` directories come from the ["Alignments"
@@ -114,20 +122,18 @@ responsible for building this file.  It is built in to the application to speed
 up program load times, particularly for the Docker container (which cannot
 cache files between executions).
 
-The R script calls BLAASD (Build Loci Amino Acid Specific Dataframe), which
+The R script calls HLAtools::buildAlignments(), which
 extracts alignment sequence information for a given locus from the
 ANHIG/IMGTHLA GitHub repository to produce a dataframe of individual amino acid
 positions for all alleles, for a user-defined HLA locus or loci.
 
-The code block for BLAASD is derived from the HLAtools R package. Future 
-versions of MGP may directly call HLAtools::buildAlignments().
+We acknowledge the Mack Laboratory at UCSF for the usage of buildAlignments():
 
-We acknowledge the Mack Laboratory at UCSF for the usage of BLAASD:
-
-Livia Tran, Ryan Nickens, Leamon Crooms IV, Derek Pappas, Vinh Luu, Josh Bredeweg,
-Steven Mack, HLAtools: Toolkit for HLA Immunogenomics.
-https://CRAN.R-project.org/package=HLAtools
-
+Tran L, Nickens R, Luu V, Petersdorf EW, Mack SJ. HLAtools, Searching Shared HLA
+Amino Acid Residue Prevalence, and the Global Frequency Browsers: New 
+Computational Resources for Working With HLA Data and Visualizing Global 
+Patterns of HLA Variation. Int J Immunogenet. 2025 Dec;52(6):358-370. 
+doi: 10.1111/iji.70013. Epub 2025 Sep 14. PMID: 40947766; PMCID: PMC12595587.
 
 We acknowledge the following publications describing the IPG-IMGT/HLA Database:
 
@@ -145,71 +151,149 @@ sequence database for the human major histocompatibility complex, *Tissue
 Antigens*, March 2000, Volume 55, Issue 3, Pages 280-287,
 [https://doi.org/10.1034/j.1399-0039.2000.550314.x](https://doi.org/10.1034/j.1399-0039.2000.550314.x).
 
-# How to Build
+## Demonstration Data
 
-Even though MGP is an R app, and does not need to be "compiled" in the way that
-a Java program is compiled, the app still must be "built": It has a number of
-dependencies—Shiny, for example—which must be downloaded and installed.  At
-least one of those dependencies (the `odbc` package) depends on an ODBC library.
-And R modules themselves are often compiled.
+To operate Demo Mode, MGP includes a demonstration database, allowing
+prospective users to try MGP without connecting to a real mTilda database.
+The `demo-db-data-dump.sql` file in the `demo-db` directory contains a
+SQLite-formatted SQL dump, which is converted into a SQLite3 database when the
+application is built.
 
-There are three ways to build MGP.  From easiest to hardest the options are…
+The SQL dump contains the minimum required schema for MGP's use, and includes
+three fake patients, each with one set of antibody screening tests (IgG Class I
+and IgG Class II), and one fake donor per patient. Two user credentials are 
+included, one representing a lab tech and one representing a supervisor.
 
-1. You can use Docker
+The `Patients` table contains patient information. It is only used to derive the
+donor's first and last name, which are displayed in a drop down during donor 
+selection. Thus, recipient ITLs are not included. 
 
-2. You can use GitHub Actions
+The `Match_grades` table contains recipient and donor typing, as well as 
+columns for calculations used in compatibility assessment. Outside of demo mode, 
+the `Match_grades` table corresponds with the Match Grade software user
+interface.
+There are two rows per patient in the demo database. 
 
-3. You can build from source.
+1. Rows where the `recipient_number` value is equal to the `donor_number` value 
+indicate the patient's typing. The `sample_number` column will be populated with
+the sample number that should be used for DSA evaluation. 
 
-## Docker
+2. Rows where the `recipient_number` value is not equal to the `donor_number`
+value indicate the donor's typing. Recipient-donor compatibility evaluation 
+columns will be populated in ‘**Calculation**’ mode for these rows.
 
-The easiest way of building MGP is to use the Dockerfile.  The container
-image uses base images from the [Rocker Project](https://rocker-project.org),
-which provides a R installation built on top of Ubuntu.
-The Dockerfile then installs the non-R libraries, installs renv, and hands off
-to renv for R package installation.
+The `Patient_tests` table contains patient tests. The `sample_number` from the
+`Match_grades` table is used to query the `Patient_tests` table to obtain 
+billable Class I and Class II IgG test numbers for DSA evaluation.
 
-To build the docker image, follow these steps:
+The `Luminex_SA_bead_detail` table contains MFI values for all beads tested for 
+IgG Class I and Class II tests. This table is used to derive MFI values for
+HvG mismatched alleles during the DSA evaluation process. If the HvG mismatched 
+allele has an MFI value greater than 1000 but less than 2000, it is considered a 
+potential weak DSA. If the MFI value is greater than 2000, it is considered 
+a potential DSA.
 
-1. Download & install Docker (or a compatible Docker-alike).
+The `Screening_results` table contains called antibodies for IgG Class I and 
+Class II tests. MGP checks if potential DSAs were called as antibodies for 
+patient tests. If the potential DSA or associated antigen group was called,
+it is considered true DSA. Otherwise, it is considered false positive. This
+secondary check is to ensure hyper-reactive beads are not considered DSA. 
 
-2. Download (or clone) a copy of this Git repository.
+# How to Get
 
-3. Run the following command: `docker buildx build --platform linux/amd64 --tag mgp .`
+There are three ways to get MGP.  From easiest to hardest, they are…
 
-   The `--platform linux/amd64` portion of the command ensures that the build
-   runs on 64-bit Linux on Intel/AMD CPUs, even if you are running the build
-   from a Mac.  Native builds on the ARM platform are not available right now.
+1. Get a ready-made container image from this repository.
 
-After the container build completes, you will have a container image named
-(or "tagged") "mgp".  More specifically, it will be tagged "mgp:latest", as
-this is your latest build of the MGP container image.
+2. Build a container image yourself
 
-Here is a demo of building the container image on a macOS system:
+3. Build MGP from source, without a container image
+
+**MGP is meant to be run as a web site, on a server.**  If you want just want
+to try out MGP (for example, in demo mode), we recommend using the "Ready-Made
+Container Image".
+
+The two "container image" methods both require Docker, or an alternative
+container engine.  If you plan on running MGP on your computer (desktop,
+laptop, etc.), we recommend installing [Docker
+Desktop](https://www.docker.com/desktop/), however other alternatives are
+available.  We also recommend that you *check with your local IT support*
+before installing programs on a work-owned computer; they might do the
+installation for you, or they might recommend something better.
+
+For more information on Docker Desktop, see the [Docker Desktop
+documentation](https://docs.docker.com/desktop/), in particular the *Setup*
+section and the *Explore Docker Desktop* section.  MGP does not require
+anything special from Docker Desktop, so the default installation options are
+fine.  Once Docker Desktop is running, you can use the Docker terminal to fetch
+(or build) an MGP container image.
+
+## Ready-Made Container Image
+
+To fetch a ready-made container image from the Stanford Blood Center's MGP
+repository, run this command in the Docker terminal:
+
+```
+docker pull --platform linux/amd64 ghcr.io/stanford-blood-center/mgp-public:main
+```
+
+GitHub provides a free service—GitHub Actions—which can be used for building
+things like container images.  This repository includes a GitHub Actions
+workflow which will run any time changes are pushed to the repository.  The
+workflow builds the container image, making it available in the repository's
+*Packages* area.  The command shown above fetches the image that was built
+using the GitHub Actions workflow.
+
+Once the container is fetched, you will see it appear in the Docker Desktop
+*Images* list, with name "ghcr.io/stanford-blood-center/mgp-public:main" and
+tag "main".
+
+## Build a container image yourself
+
+If you do not want to rely on GitHub, you can build a container image
+yourself.  *This method requires intermediate IT skills.*
+
+First, you must get a copy of this repository's contents: If you go to this
+repository's page on GitHub, and click on the green `<> Code` button, you will
+have an option to download a ZIP file of the repository.  Download the ZIP
+file, and unpack it on your computer.  If you know how to use Git, you may
+instead clone the repository.
+
+Using the Docker terminal inside Docker desktop, change to unpacked directory
+and then run the following command:
+
+```
+docker buildx build --platform linux/amd64 --tag mgp .
+```
+
+The `Dockerfile` file in the repository contains the instructions that Docker
+(or a similar program) uses to build a container image.  Docker will start
+by using a pre-built 'base' container image from the [Rocker
+Project](https://rocker-project.org); this image contains a basic Linux
+distribution, along with the R and renv versions that we need.
+
+Using the base image, Docker will install the remaining prerequisites, as well
+as MGP's code.  The process will take time (potentially tens of minutes) to
+complete.
+
+After the container build completes, you will see it appear in the Docker
+Desktop *Images* list, with name "mgp" and tag "latest".
+
+Here is a demo of building the container image on a macOS system, to give you
+an idea of the messages that will appear during the build process:
 
 [![asciicast](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1.svg)](https://asciinema.org/a/5TE4WiUwO1UtLulfU635s4BL1)
-
-## GitHub Actions
-
-This repository includes a GitHub Actions workflow which will run any time
-there is a push.  The workflow builds the container image, making it available
-in the repository's *Packages* area.  Click on the package name to view
-instructions on how to pull the container image.
-
-You should expect your container image's name to be based on the GitHub repo
-and branch names.  For example, if your repo is named "matchgrade" and the
-branch name is "sbc", the container image will be tagged "matchgrade:sbc".
 
 ## Building from Source
 
 Building MGP from source is only really useful if you plan on doing development
 work on MGP.  If you are just trying to use MGP, then building from source is
-probably not worth it.
+probably not worth it.  **Advanced IT and R skills are required.**
 
 These instructions will be fairly generic.  Converting the generic instructions
 to specific instructions is left as an exercise for the reader.
 
-1. Download and install R and renv.
+1. Download & install R, renv, and sqlite3.
 
 2. Install all of the libraries listed in the *Requirements* section.  Ensure
    that both the library *and the header files* are available.
@@ -219,16 +303,56 @@ to specific instructions is left as an exercise for the reader.
 4. Run `renv restore`.  This will download and build the R pacakges.  Expect it
    to take some time.
 
+5. `cd` to the `demo-db` directory.
+
+6. Run `sqlite3 mgp-demo.db`.  When the `sqlite>` prompt appears, run `.read
+   demo-db-data-dump.sql` to create the demonstration database (this should
+   only take a few seconds).  When the `sqlite>` prompt reappears, run the
+   `.quit` command to exit the SQLite3 command-line.
+
 You should now have an R environment that is ready to run MGP.
+
+### Note on Demo Mode
+
+If you build MGP from source and plan to run demo mode, you will need to set a
+couple of environment variables to *exact*, *case-sensitive* values.  When
+building a container, the build process sets the environment variables to
+default values that can enable demo mode; when building from source, you must
+set the environment variables yourself.
+
+To enable demo mode when building from source, set the following environment
+variables (remember the values are *case-sensitive*):
+
+* Set `SERVER` to "127.0.0.1".
+
+* Set `DB` to "noDB".
+
+* Set `DB_USERNAME` to "noUsername".
+
+* Set `DB_PW` to "noPassword".
+
+* Set `DRIVER` to "ODBC Driver 17 for SQL Server".
+
+You must also set `TZ` to a valid canonical [tz database time
+zone](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones) (such as
+"America/Los\_Angeles"), and you must set `MAINTAINER_EMAIL` to a valid email
+address.
+
+Finally, `INSTITUTION_ID` must also be set, but it can be set to any valid
+string.
 
 # How to Run
 
-Once you have "built" MGP, you need to run it!  To do so, you first need to
-identify which ODBC driver you will be using.  Then, you need to set
-environment variables.  Finally, you can run MGP according to how you built it.
+Once you have "built" MGP, you need to run it!  How you run it depends on how
+you got it.
 
-*For multi-user use, we recommend using
-[ShinyProxy](https://www.shinyproxy.io)*: For MGP to work, it needs read access
+If you are only interested in exploring MGP, **demo mode can be used without
+ShinyProxy, and without connecting to mTilda.**  If you are just looking to
+explore MGP, you can run demo mode locally, on your computer.  The next section
+explains how to run demo mode locally, on your computer.
+
+**For multi-user & production use, we recommend using
+[ShinyProxy](https://www.shinyproxy.io)**: For MGP to work, it needs read access
 to the mTilda database.  That means MGP needs access to database credentials,
 and those should not be kept on end-user machines.  Running the MGP Docker
 container inside ShinyProxy ensures the application code and configuration are
@@ -236,89 +360,133 @@ kept off of end-user machines.  In addition, ShinyProxy likely supports your
 site's authentication system, and is also able to use "Social Auth" (like
 Google) as a fallback.
 
-## ODBC Driver
+*Installing ShinyProxy is outside the scope of this guide.*  The sub-section
+"Running in ShinyProxy" (near the end of this document) provides instructions
+on how to use MGP inside ShinyProxy, but it is up to you to configure
+ShinyProxy with the authentication, logging, etc. that is necessary for your
+site.  We recommend that you work with your local IT support to set up
+ShinyProxy and deploy MGP.
 
-To configure MGP, you need to tell it which ODBC driver to use.
-If you are using the Docker container, you can skip this step.
+## Demo Mode locally, on your computer
 
-The ODBC driver manager provides a list of drivers, either in an app or in an
-INI file.
-
-For example, here is the contents of the `odbcinst.ini` file on a macOS system,
-after installing the Microsoft ODBC Driver for SQL Server, version 17:
+To run demo mode locally, you are probably using a ready-made container image,
+and you are probably using Docker Desktop.  If you are, then the command to run
+MGP Demo Mode is very similar to the command you used to get the ready-made
+container image.
 
 ```
-$ cat /opt/local/etc/odbcinst.ini
-[ODBC Driver 17 for SQL Server]
-Description=Microsoft ODBC Driver 17 for SQL Server
-Driver=/opt/local/lib/libmsodbcsql.17.dylib
-UsageCount=1
+docker run --rm --publish 3838:3838 --platform linux/amd64 ghcr.io/stanford-blood-center/mgp:main
 ```
 
-On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
-On Windows, the information is available through the *ODBC Data Source
-Administrator* application, in the *Drivers* tab.
+If you build the container image yourself, assuming you used the tag "mgp",
+then the command to run MGP Demo Mode is this:
 
-![The "Drivers" tab of the Windows "ODBC Data Sourace Administrator"
-application](https://github.com/user-attachments/assets/913a78ef-f008-432a-bb3f-b327b91fe513)
+```
+docker run --rm --publish 3838:3838 --platform linux/amd64 mgp
+```
 
-You will need to identify the name of the ODBC driver to use, and then set the
-appropriate environment variable.
+Here is an example of the command being run in a terminal window, along with
+the messages that can appear:
+
+![A terminal window showing the output of the docker run command](https://github.com/user-attachments/assets/aea3b0c0-4f02-4dd8-8440-d7e230869b54)
+
+When you see the message "Listening on http://0.0.0.0:3838", pull up a web
+browser and go to [http://localhost:3838](http://localhost:3838).  You should
+see a prompt for a mTilda username, followed by a prompt for an ITL.
+
+### Demo Mode accounts & donors
+
+Since you started MGP with no additional configuration, it will automatically
+start up in demo mode.
+
+Since demo mode is not connected to a real mTilda database, the demonstration
+database includes two mTilda usernames:
+
+* `s_user` is a demonstration Supervisor.
+
+* `t_user` is a demonstration Lab Tech.
+
+Log in to MGP with one of those usernames, and then choose from one of the
+following three Patient ITLs:
+
+* `518049` is associated with donor "Rusty Rebellon".
+
+* `374915` is associated with donor "Chicken Strout".
+
+* `869146` is associated with donor "Thelma Tran".
+
+Once you have logged in, entered an ITL, and selected a donor, the match grade
+evaluation will run.  The results will be displayed on the web page, with
+detailed logs being displayed in the terminal window.
+
+Here is an example of the terminal window showing part of the logs from the
+match grade evaluation, in front of the web browser showing match grade results:
+
+![A terminal window showing the output of the docker run command](https://github.com/user-attachments/assets/f99f271e-6a26-466d-adf6-e67ddc010478)
+
+When you are done using MGP, close the web browser and the terminal window.
+You may also close Docker Desktop.
 
 ## Environment Variables
 
+If you have decided to not run MGP in demo mode, you will need to configure it.
 MGP is configured using environment variables.  The exact method of setting
 environment variables depends on your operating system and how you are going to
 run MGP.
 
-Here are the environment variables you need to set:
+Most environment variables are required, but not always.  For example, if you
+run Demo Mode, most environment variables do not need to be set.  Assume that
+an environment variable needs to be set, unless you are told otherwise.
 
-* Name: `DRIVER`
-
-  Derscription: The name of the ODBC Driver to use for connecting to the
-  database.  This should be the name of a driver from the `odbcinst.ini`
-  configuration file.  For example, "ODBC Driver 17 for SQL Server".
-
-  If you are using the Docker container, this environment variable is already
-  set for you in the container, so you should ignore it.
+Here are the environment variables:
 
 * Name: `SERVER`
 
   Description: The hostname or IP address of the SQL Server.
 
+  If you are running Demo Mode, do not set this variable.
+
 * Name: `DB`
 
   Description: The name of the SQL Server database.
+
+  If you are running Demo Mode, *and* you built MGP from source, set this to
+  `noDB`.  If you are running Demo mode, and are using a Docker container
+  (either one you built yourself, or one from GitHub), do not set this variable.
 
 * Name: `DB_USERNAME`
 
   Description: A username with read-only access to the database.
 
+  If you are running Demo Mode, do not set this variable.
+
 * Name: `DB_PW`
 
   Description: The password for `DB_USERNAME`.
+
+  If you are running Demo Mode, do not set this variable.
 
 * Name: `TZ`
 
   Description: The time zone to use for log messages.
 
-  For the `TZ` environment variable, you should set it to a Canonical TZ
-  identifier from the [List of tz database time
+  You should set this to a Canonical TZ identifier from the [List of tz
+  database time
   zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones).  For
-  example, if your machine uses Japan Standard Time, set the `TZ` environment
-  variable to `Asia/Tokyo`.  If you try setting it to `Tokyo`, which is not a
-  Canonical identifier, things will break.
+  example, if you use Japan Standard Time, set the `TZ` environment variable to
+  `Asia/Tokyo`.  If you try setting it to `Tokyo`, which is not a Canonical
+  identifier, things will break.
 
-  If you do not set the `TZ` environment variable, the behavior depends on how
-  you run MGP: MGP may automatically use the system time zone, or it may fall
-  back to UTC.
+  This environment variable is optional, but if you do not set it, the behavior
+  depends on how you run MGP: MGP may automatically use the system time zone,
+  or it may fall back to UTC.
 
 * Name: `MAINTAINER_EMAIL`
 
   Description: The email address of the person who maintains this installation
   of MGP.
 
-  If you do not set the `MAINTAINER_EMAIL` environment variable, the string
+  This environment variable is optional, but if you do not set it, the string
   `maintaneremail@placeholder.com` will be used instead.
 
 * Name: `INSTITUTION_ID`
@@ -326,11 +494,23 @@ Here are the environment variables you need to set:
   Description: The term that your site uses to refer to usernames.  At Stanford
   University, this is "SUNetID".
 
-  If you do not set the `INSTITUTION_ID` environment variable, the string
+  This environment variable is optional, but if you do not set it, the string
   "Instituion ID" will be used instead.
 
-The `TX`, `MAINTAINER_EMAIL`, and `INSTITUTION_ID` environment variables are
-optional; all others are required.
+* Name: `DRIVER`
+
+  Derscription: The name of the ODBC Driver to use for connecting to the
+  database.  This should be the name of a driver from the `odbcinst.ini`
+  configuration file (on macOS and Linux), or from the *ODBC Data Source
+  Administrator* application (on Windows).  For example, "ODBC Driver 17 for
+  SQL Server".
+
+  You only need to set this environment variable if you used the *Building from
+  Source* instructions.  For information on how to set this environment
+  variable, see the section *Running from Source*.
+
+  If you are using a Docker container (either one you built yourself, or one
+  from GitHub), do not set this variable.
 
 ## Running with Docker
 
@@ -401,7 +581,46 @@ repository's `renv` directory should now contain lots of files, representing
 the R packages that renv installed.
 
 Make sure you have set the environment variables.  Since you are not using the
-Docker container, you *will* need to set the `DRIVER` environment variable.
+Docker container, you *will* need to set the `DRIVER` environment variable:
+
+### Configuring the ODBC Driver
+
+To configure a non-container MGP, you need to tell it which ODBC driver to use.
+
+The ODBC driver manager provides a list of drivers, either in an app or in an
+INI file.
+
+For example, here is the contents of the `odbcinst.ini` file on a macOS system,
+after installing the Microsoft ODBC Driver for SQL Server, version 17:
+
+```
+$ cat /opt/local/etc/odbcinst.ini
+[ODBC Driver 17 for SQL Server]
+Description=Microsoft ODBC Driver 17 for SQL Server
+Driver=/opt/local/lib/libmsodbcsql.17.dylib
+UsageCount=1
+```
+
+On Linux, the same file will typically be located at path `/etc/odbcinst.ini`.
+On Windows, the information is available through the *ODBC Data Source
+Administrator* application, in the *Drivers* tab.
+
+![The "Drivers" tab of the Windows "ODBC Data Sourace Administrator"
+application](https://github.com/user-attachments/assets/913a78ef-f008-432a-bb3f-b327b91fe513)
+
+You will need to identify the name of the ODBC driver to use, and then set the
+`DRIVER` environment variable to the name of the ODBC driver that you will be
+using.  On macOS and Linux, this will likely be `"ODBC Driver 17 for SQL
+Server"`; on Windows, this could be `"ODBC Driver 17 for SQL Server"` or `"SQL
+Server"`.
+
+Remember, **ODBC Driver 18** is not compatible with mTilda at this time, so you
+should continue to use the Microsoft ODBC Driver 17.
+
+### Running MGP
+
+With the final environment variable (`DRIVER`) configured, you can now proceed
+to running MGP.
 
 To run the application, run the command `renv run app.R`.  After a short delay,
 you should see the message `Listening on http://127.0.0.1:7346` (though you may
@@ -458,9 +677,6 @@ app](https://github.com/user-attachments/assets/2ca3f634-3dd6-43ce-9051-18c3cfd5
 # Copyright & Licensing
 
 Match Grade Populator is © Stanford Blood Center, LLC.
-
-The file `functions/BLAASD.R` is © 2020 The Regents of the University of
-California.
 
 The copyrightable parts of the IPD-IMGT/HLA database are covered under the
 Creative Commons Attribution-NoDerivs License.  Read the [IPD-IMGT/HLA License

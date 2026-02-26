@@ -1,3 +1,8 @@
+MGP v 1.13.0 2/25/26
+-------------------
+  * fixed bug where DRB5*01:03 surrogate (DR51) was filtered out
+  * added 'Recipient DSA Date Selected' to reviewer mode
+  
 MGP v 1.12.9 8/26/25
 -------------------
   * updated alignments to v 3.61.0
