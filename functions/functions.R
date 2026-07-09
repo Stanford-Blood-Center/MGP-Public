@@ -520,8 +520,6 @@ calcABCDRB<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     
   } else{
     
-    nmdp_flag<-reg_flag<-FALSE
-    
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
@@ -840,8 +838,6 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     return(list(c(total, matches, 0, 0), hvg, gvh, NULL))
   } else{
     
-    nmdp_flag<-reg_flag<-FALSE
-    
     d_mm_alleles<-unique(d_filtered_alleles[which(!d_filtered_alleles %in% r_filtered_alleles)])
     r_mm_alleles<-unique(r_filtered_alleles[which(!r_filtered_alleles %in% d_filtered_alleles)])
     
@@ -860,6 +856,8 @@ calcDQDP<-function(cat, d_hla, r_hla, synqList, filter_d, filter_r){
     
     ##GvH calculation
     for(i in r_mm_alleles){
+      
+      nmdp_flag<-reg_flag<-FALSE
       
       mm_locus<-gsub('^(.*?)\\*.*$', '\\1', i)
       
