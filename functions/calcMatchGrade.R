@@ -44,23 +44,15 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
         # DSA draw date will only be returned in reviewer mode 
         dsaDrawDate<-getDSADrawDate(con, sample_num)
         
-        ab_results<-getAbResults(con, testNums)
-        ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
-        
-        #if called antibodies for both classes are 'Negative', DSA = N
-        if(all(ab_results$called_antibodies == 'Negative')){
+        ab_results <- getPositiveScores(con, testNums)
+
+        #if ab_results is not a dataframe, both screenings are Negative
+        if(!is.data.frame(ab_results)){
           calculateDSA<-FALSE
         } else{
-          #recipient positive antigens 
-          positive_antigens<-ab_results %>%
-            filter(called_antibodies != 'Negative') %>%
-            pull(called_antibodies) %>%
-            strsplit(., ' ') %>%
-            unlist()
           
+          positive_antibodies <- gsub(',', '/', ab_results$probe_id)
           
-          #split any haplotypes into separate alleles
-          #positive_antigens<-unlist(sapply(positive_antigens, function(x) if(grepl('/', x)) unlist(strsplit(x, '/')) else x), use.names = F)
           mfi_vals<-getMFIvals(con, r_itl, testNums)
 
           #if value is blank for average value, all beads in that antigen group have
@@ -188,7 +180,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
       
       lgr$info('Evaluating DSA...')
       if(calculateDSA == TRUE){
-        DSAresults<-calcDSA(con, hvg_mm_alleles_eval, positive_antigens, mfi_vals, unlist(donor_hla, use.names = F), unlist(recip_hla, use.names = F))
+        DSAresults<-calcDSA(con, hvg_mm_alleles_eval, positive_antibodies, mfi_vals, unlist(donor_hla, use.names = F), unlist(recip_hla, use.names = F))
         DSA<-DSAresults[[1]]
         DSAmessage<-DSAresults[[2]]
       } else if(calculateDSA == FALSE){

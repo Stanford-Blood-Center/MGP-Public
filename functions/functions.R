@@ -998,7 +998,8 @@ getIgGTestNums<-function(con, s_num){
   
   res<-dbGetQuery(con, sprintf("SELECT test_number
                            FROM Patient_tests
-                           WHERE sample_number = %s AND test_type_code in ('LSAB1', 'LSAB2') AND billing_flag = 'B'", s_num))
+                           WHERE sample_number = %s AND test_type_code in ('LSAB1', 'LSAB2') AND billing_flag = 'B'
+                            ORDER BY test_type_code", s_num))
   testNums<-res %>%
     pull(test_number)
   
@@ -1006,16 +1007,33 @@ getIgGTestNums<-function(con, s_num){
   
 }
 
-#get antibody screening results
-getAbResults <- function(con, testNumbers) {
-  
-  res<-dbGetQuery(con, sprintf('SELECT called_antibodies
-                           FROM Screening_results
-                           WHERE test_number in (%s)', testNumbers))
-  
-  #use str_trim to make sure there is no white space before or after if 'Negative'
-  #is present in the called_antibodies column 
-  res$called_antibodies<-str_trim(res$called_antibodies)
+# function to get all positive beads for Class I and Class II IgG tests
+# used in DSA determination. sole reliance on called antibodies missed DSA
+# in cases where truncated alpha, beta, or combo specific are called - 
+# MGP calls them as false positive because they are not called as AG or ASP combo
+# EX: HvG MM is DQB1*06:02 and donor has DQA1*01:02. DQA1*01:02/DQB1*06:02 is 
+# reactive with MFI > 2000. if DQB1*06:02 was called truncated beta, MGP would
+# count it as false positive bc neither DQ6 or DQA1*01:02/DQB1*06:02 were called.
+# adding all positive beads ensures DQA1*01:02/DQB1*06:02 is present, and DSA
+# is properly called
+
+getPositiveScores <- function (con, test_numbers) {
+
+  res <- dbGetQuery(con, sprintf("
+        SELECT ls_bead.probe_id
+        FROM Luminex_screen_scores lscores
+        INNER JOIN Luminex_screen_score_detail ls_detail
+        ON lscores.score_number = ls_detail.score_number
+        INNER JOIN (select probe_id, beads, test_number from 
+        Luminex_SA_bead_detail WHERE test_number IN (%s) and (probe_id IS NOT NULL AND probe_id != '' AND beads NOT LIKE '%% %%')) ls_bead
+        ON ls_detail.bead_number = ls_bead.beads
+        AND ls_bead.test_number = lscores.test_number
+        WHERE score = '8'", test_numbers))
+
+  if(nrow(res) == 0){
+    lgr$info('Class I and Class II tests are Negative for positive antibodies!')
+    res <- "Negative"
+  } 
   
   return(res)
 }
@@ -1099,8 +1117,8 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
     mfi = character()
   )
   
-  #DSA = No if no mismatched alleles or called_antibodies = Negative
-  if(length(mismatched_alleles)==0 | any(called_antibodies == 'Negative')){
+  #DSA = No if no mismatched alleles
+  if(length(mismatched_alleles)==0){
     return(list(call_dsa, dsaDF))
   }
   
@@ -1379,11 +1397,24 @@ calcDSA<-function(db_con, mismatched_alleles, called_antibodies, mfi_vals, donor
       if(!is.null(nmdp_allele)){
         t<-nmdp_allele  
       }
-
+      
       #check if antigen with MFI > 1000 is in called_antibodies list
       #for surrogates, there can be multiple probe_ids
-      if(any(unique(mfi_eval$antigen) %in% called_antibodies) | any(mfi_eval$probe_id %in% called_antibodies)){
-        
+      if(any(mfi_eval$probe_id %in% called_antibodies)){
+         
+        # DP and DQ alpha mismatch evaluation can map to multiple AGs or beads
+        # if one of the antigens is called, this conditional is entered, but they
+        # may not all have been called
+        # filter to only called antigens or ASP
+        # EX: DPA1*02:01 is being assessed and DP1 and DP14 are reactive 
+        # DP1 was not called in antibody screening tests, either due to HR or self
+        # DP14 was called
+        # DP1 should not be included or marked as DSA 
+        if (locus %in% c('DPA1', 'DQA1')){
+          mfi_eval <- mfi_eval %>%
+            filter((antigen %in% called_antibodies) | probe_id %in% called_antibodies)
+        }
+
         #if surrogate was used, multiple beads can be present; use the min and max of all bead data
         if(nrow(mfi_eval) > 1){
           mfi_value<-sprintf('%s to %s',min(mfi_eval$average_value),max(mfi_eval$average_value))
