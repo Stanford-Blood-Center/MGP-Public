@@ -1,3 +1,19 @@
+MGP v 1.13.1 7/14/26
+-------------------
+  * updated alignments to 3.64.0
+  * bug fixes
+    - DSA missed due to lack of serological equivalence logic for DQ7. added logic
+    to append serologically equivalent DQ7 beta if the donor is DQ7
+    - DSA missed due to truncated ASP call in antibody screening results. removed
+    dependence on called antibodies for calling false positives and use positively
+    scored beads instead
+    - incorrect counts in calcDQDP for cases if donor has NMDP and full typing
+    (i.e. during DQ analysis, DQ alpha is high res but DQ beta is NMDP) due
+    to reg_flag and nmdp_flag not being initialized as false INSIDE of loop
+  * added str_trim() to patient$itl in case there are any whitespaces to prevent
+  job failure -- filtering to the recipient's genotype by ITL causes issues
+  due to the extra whitespace
+
 MGP v 1.13.0 2/25/26
 -------------------
   * fixed bug where DRB5*01:03 surrogate (DR51) was filtered out
