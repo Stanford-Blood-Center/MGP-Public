@@ -1,7 +1,7 @@
 #server
 #by: Livia Tran
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v1.13.0
+#v1.13.1
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -144,7 +144,7 @@ server <- function(input, output, session) {
   patient<-reactiveValues(itl=NULL)
   
   observeEvent(input$p_itl, {
-    patient$itl<-isolate(input$p_itl)  
+    patient$itl<-isolate(str_trim(input$p_itl))
   })
   
   #save donor selected ITLs to a reactive value
