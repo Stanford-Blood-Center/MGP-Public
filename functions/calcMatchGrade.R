@@ -1,5 +1,5 @@
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.13.1
+#v 1.13.2
 
 options(warn = 2) 
 
@@ -40,19 +40,36 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
           errorMessage<-'The selected DSA date in the Match Grade software does not have any associated IgG tests. Please check the selected DSA date.'
           stop('Selected DSA date does not have associated IgG tests')
         }
-        
+
         # DSA draw date will only be returned in reviewer mode 
         dsaDrawDate<-getDSADrawDate(con, sample_num)
         
-        ab_results <- getPositiveScores(con, testNums)
+        ab_results<-getAbResults(con, testNums)
+        ab_results$called_antibodies<-str_trim(ab_results$called_antibodies)
 
-        #if ab_results is not a dataframe, both screenings are Negative
-        if(!is.data.frame(ab_results)){
+        #if called antibodies for both classes are 'Negative', DSA = N
+        if(all(ab_results$called_antibodies == 'Negative')){
           calculateDSA<-FALSE
         } else{
+          # recipient positive antigens 
+          positive_antigens<-ab_results %>%
+            pull(called_antibodies) 
+
+          # add ASP beads for any truncated AB calls for class II if not Negative
+          if(positive_antigens[[2]] != "Negative"){
+            c2_split <- strsplit(positive_antigens[[2]], ' ')[[1]]
+            
+            beads_to_append <- unlist(truncated_mapping[c(c2_split)], use.names = FALSE)
+            if(!is.null(beads_to_append)){
+              positive_antigens[[2]]<-paste(positive_antigens[[2]], paste(beads_to_append, collapse = ' '))
+              lgr$info(sprintf("Truncated calls detected - appending %s to called_antibodies", paste(beads_to_append, collapse = ', ')))
+            }
+          }
           
-          positive_antibodies <- gsub(',', '/', ab_results$probe_id)
-          
+          positive_antigens <- keep(positive_antigens %>%
+                                      str_split(., ' ') %>%
+                                      unlist(), ~ .x != 'Negative')
+
           mfi_vals<-getMFIvals(con, r_itl, testNums)
 
           #if value is blank for average value, all beads in that antigen group have
@@ -180,7 +197,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
       
       lgr$info('Evaluating DSA...')
       if(calculateDSA == TRUE){
-        DSAresults<-calcDSA(con, hvg_mm_alleles_eval, positive_antibodies, mfi_vals, unlist(donor_hla, use.names = F), unlist(recip_hla, use.names = F))
+        DSAresults<-calcDSA(con, hvg_mm_alleles_eval, positive_antigens, mfi_vals, unlist(donor_hla, use.names = F), unlist(recip_hla, use.names = F))
         DSA<-DSAresults[[1]]
         DSAmessage<-DSAresults[[2]]
       } else if(calculateDSA == FALSE){
