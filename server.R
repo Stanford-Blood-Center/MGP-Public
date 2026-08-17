@@ -1,7 +1,7 @@
 #server
 #by: Livia Tran
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v1.13.1
+#v1.13.2
 
 suppressPackageStartupMessages(library(odbc))
 suppressPackageStartupMessages(library(shinyjs))
@@ -212,6 +212,8 @@ server <- function(input, output, session) {
     mg<-getMatchGrade(con, patient$itl)
     r_mg<-mg %>%
       filter(donor_number == patient$itl)
+    
+    alignments<<-readRDS(list.files('ref/', pattern = 'alignments', full.names = T))
     
     lgr$info('Extracting recipient typing...')
     recip_Typing<-getTyping(con, r_mg, type = 'r')
