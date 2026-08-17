@@ -1,3 +1,22 @@
+MGP v 1.13.2 8/17/26
+-------------------
+  * moved readRDS for reading in alignments to outside of getTyping() -- reading
+    the .rda is time consuming and it doesn't need to be read in twice since it's
+    a global object
+  * bug fixes
+    - re-instated dependence on called antibodies for calling false positives,
+    with added mapping of truncated calls for class 2. if a truncated call is made in the
+    associated antibody screening, map the corresponding ASP beads and add them
+    to called_antibodies. for example, if DRB5*01 is called in the AB screening
+    and DRB5*01:01 is HvG and shows reactivity, it would be considered false
+    positive since DR51 and DRB5*01:01 were not called ASP. DRB5*01 maps to 
+    DRB5*01:01 and DRB5*01:02 in the truncated mapping -- those alleles would be
+    added to called_antibodies so DRB5*01:01 would not be considered false positive
+    - added evalulation clause for calling DSA if the mismatched allele is
+    in called_antibodies -- this addresses cases where 2 field alpha or beta 
+    are called. EX: DQB1:06:02 is called as beta specific, and DQB1*06:02 is being
+    evaluated; DQ6 and DQB1*06:02 heterodimers are not called. 
+
 MGP v 1.13.1 7/14/26
 -------------------
   * updated alignments to 3.64.0
