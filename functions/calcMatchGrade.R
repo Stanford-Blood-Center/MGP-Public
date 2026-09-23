@@ -1,5 +1,5 @@
 #Match Grade Populator © Stanford Blood Center, LLC.
-#v 1.13.2
+#v 1.13.3
 
 options(warn = 2) 
 
@@ -30,6 +30,7 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
         calculateDSA<-'Unknown'
         dsaDrawDate<-NULL
       } else{
+        
         #get IgG test numbers to get MFI values and AB screening results
         #for IgG specific tests
         testNums<-paste(getIgGTestNums(con, sample_num), collapse=',')
@@ -39,6 +40,9 @@ calcMatchGrade<-function(r_itl, d_itl, credentials, recip_hla, donor_hla, synnon
         if(testNums == ""){
           errorMessage<-'The selected DSA date in the Match Grade software does not have any associated IgG tests. Please check the selected DSA date.'
           stop('Selected DSA date does not have associated IgG tests')
+        } else if(length(testNums) == 1){
+          errorMessage<-'The selected DSA date in the Match Grade software only has one associated IgG test. Please check that the selected serum was not used for PCP testing.'
+          stop('Selected DSA date only has one associated IgG test')
         }
 
         # DSA draw date will only be returned in reviewer mode 

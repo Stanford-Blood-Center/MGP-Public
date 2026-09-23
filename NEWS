@@ -1,3 +1,9 @@
+MGP v 1.13.3 9/23/27 
+-------------------
+  * added logic to fail a run and stop MGP if the selected serum for DSA
+  only has 1 associated IgG test -- these are used for PCP testing and should 
+  not be used for Match Grade evaluation
+
 MGP v 1.13.2 8/17/26
 -------------------
   * moved readRDS for reading in alignments to outside of getTyping() -- reading
